@@ -13,6 +13,12 @@ class NPC:
       self.all_four_of_a_kind = table.all_four_of_a_kind
       self.all_full_house = table.all_full_house
 
+  def build(self, handCards):
+    self.card_state = [CARD_PLAYED] * 52
+    for card in handCards:
+      self.card_state[card] = IN_MY_HAND 
+    return
+
   #interface
   def see(self, cards):
     for card in cards:

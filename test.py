@@ -93,11 +93,10 @@ def test3():
     player = Player()
     player.handSize = 13
     playerlist.append(player)
-  playerlist[3].handSize = 8
+  playerlist[0].handSize = 8
   
-  myHand = ['8H', '9H', 'AH', 'KH', '4S', '6C', 'QH', 'TD', 'AS', '9C', '2H', '8C', 'TH']
-
-  toBeat = Trick(3, ['AC', 'QS', 'JD', 'KD', 'TS'])
+  myHand = ['KC', 'KS', '9D', '3H', '8H', 'KD', 'JH', 'TH', 'AS', '6C', '5S', '6S', '9S']
+  toBeat = Trick(3, ['2D', 'JD', '8D', '5D', 'QD'])
   matchHistory = []
 
   history1 = GameHistory()
@@ -105,7 +104,7 @@ def test3():
   history1.finished = False
   history1.gameHistory = []
   round = []
-  trick1 = Trick(0, ['AC', 'QS', 'JD', 'KD', 'TS'])
+  trick1 = Trick(0, ['2D', 'JD', '8D', '5D', 'QD'])
   round.append(trick1)
   history1.gameHistory.append(round)
 

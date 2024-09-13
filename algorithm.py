@@ -240,8 +240,9 @@ def calculate_value(times, win):
   value = 0
   if win == NPC0_WIN:
     value += 10
-
-  value += times * 10
+    value -= times
+  elif win == NPC1_WIN:
+    value += times
   return value
 
 class Table:
@@ -276,8 +277,15 @@ class NPC:
       self.all_four_of_a_kind = table.all_four_of_a_kind
       self.all_full_house = table.all_full_house
 
+  def build(self, handCards):
+    self.card_state = [CARD_PLAYED] * 52
+    for card in handCards:
+      self.card_state[card] = IN_MY_HAND 
+    return
+
   #interface
   def see(self, cards):
+    
     for card in cards:
       self.card_state[card] = CARD_PLAYED
 
@@ -477,11 +485,8 @@ class NPC:
               output.append(tmp)
     return output
 
-
-  def cal_5card_possible_moves_new(self, cards):
+  def make_handGroup(self):
     myHandGroup = [] #group according to rank
-    myFlushGroup = [] #group according to suit
-
     group = []
     for i in range(len(self.card_state)):
       if self.card_state[i] == IN_MY_HAND:
@@ -495,6 +500,10 @@ class NPC:
             myHandGroup.append(copy.deepcopy(group))
             group = [i]
 
+    return myHandGroup 
+  
+  def make_flushGroup(self):
+    myFlushGroup = [] #group according to suit
     group0 = []
     group1 = []
     group2 = []
@@ -515,7 +524,15 @@ class NPC:
     myFlushGroup.append(group1)
     myFlushGroup.append(group2)
     myFlushGroup.append(group3)
-    
+
+    return myFlushGroup
+
+  def cal_5card_possible_moves_new(self, cards):
+    #group according to rank
+    myHandGroup = self.make_handGroup()
+    #group according to suit
+    myFlushGroup = self.make_flushGroup()
+
     output = []
     if cards == None or len(cards) == 0:
       output += self.cal_straight_new(myHandGroup, cards)
@@ -529,22 +546,22 @@ class NPC:
     type = card5_type(cards)
     if type == STRAIGHT:
       output += self.cal_straight_new(myHandGroup, cards)
-      output += self.cal_flush_new(myFlushGroup, cards)
-      output += self.cal_full_house_new(myHandGroup, cards)
-      output += self.cal_four_in_a_kind_new(myHandGroup, cards)
-      output += self.cal_straight_flush_new(myFlushGroup, cards)
+      output += self.cal_flush_new(myFlushGroup, [])
+      output += self.cal_full_house_new(myHandGroup, [])
+      output += self.cal_four_in_a_kind_new(myHandGroup, [])
+      output += self.cal_straight_flush_new(myFlushGroup, [])
     elif type == FLUSH:
       output += self.cal_flush_new(myFlushGroup, cards)
-      output += self.cal_full_house_new(myHandGroup, cards)
-      output += self.cal_four_in_a_kind_new(myHandGroup, cards)
-      output += self.cal_straight_flush_new(myFlushGroup, cards)
+      output += self.cal_full_house_new(myHandGroup, [])
+      output += self.cal_four_in_a_kind_new(myHandGroup, [])
+      output += self.cal_straight_flush_new(myFlushGroup, [])
     elif type == FULL_HOUSE:
       output += self.cal_full_house_new(myHandGroup, cards)
-      output += self.cal_four_in_a_kind_new(myHandGroup, cards)
-      output += self.cal_straight_flush_new(myFlushGroup, cards)
+      output += self.cal_four_in_a_kind_new(myHandGroup, [])
+      output += self.cal_straight_flush_new(myFlushGroup, [])
     elif type == FOUR_OF_A_KIND:
       output += self.cal_four_in_a_kind_new(myHandGroup, cards)
-      output += self.cal_straight_flush_new(myFlushGroup, cards)
+      output += self.cal_straight_flush_new(myFlushGroup, [])
     elif type == STRAIGHT_FLUSH:
       output += self.cal_straight_flush_new(myFlushGroup, cards)
 
@@ -615,6 +632,37 @@ class NPC:
       return self.cal_5card_possible_moves_new(cards)
     return output
   
+  def cal_good_selfplay_moves(self):
+    output = []
+    handGroup = self.make_handGroup()
+    flushGroup = self.make_flushGroup()
+    flushes = self.cal_flush_new(flushGroup, [])
+    straights = self.cal_straight_new(handGroup, [])
+      
+    for group in handGroup:
+      if (len(group) == 1): 
+        not_in_any_straight = True
+        for straight in straights:
+          if group[0] in straight:
+            not_in_any_straight = False
+            break
+        not_in_any_flush = True
+        for flush in flushes:
+          if group[0] in flush:
+            not_in_any_flush = False
+            break 
+        if not_in_any_straight and not_in_any_flush:
+          return [group]
+
+    #if it comes here, that means no single, so
+    output += self.cal_two_cards_moves(None)
+    output += self.cal_three_cards_moves(None)
+    output += self.cal_full_house_new(handGroup, [])
+    output += self.cal_four_in_a_kind_new(handGroup, [])
+    output += self.cal_straight_flush_new(handGroup, [])
+
+    return output
+  
   def play_random(self, cards):
     moves = self.cal_possible_moves(cards)
     if moves == None or len(moves) == 0:
@@ -662,7 +710,25 @@ class Algorithm:
         suit = get_suit(card)
         output.append(f'{ranks[rank]}{suits[suit]}')
       return output
-        
+
+    def make_hand_group(self, myHandCards):
+      handGroup = []
+      group = []
+      for i in range(len(myHandCards)):
+        if len(group)==0 or get_rank(myHandCards)==get_rank(group[0]):
+          group.append(myHandCards[i])
+        else:
+          handGroup.append(group)
+          group.append(i)
+      return handGroup
+    
+    def make_flush_group(self, myHandCards):
+      myFlushGroup = [[],[],[],[]] #group according to suit
+      for i in range(len(myHandCards)):
+        suit = get_suit(myHandCards[i])
+        myFlushGroup[suit].append(myHandCards[i])
+      return myFlushGroup
+    
     def getAction(self, state: MatchState):
       action = []             # The cards you are playing for this trick
       myData = state.myData   # Communications from the previous iteration
@@ -682,9 +748,9 @@ class Algorithm:
       #formulate the state:
       card_state = [IN_OTHER_HAND] * 52
       for card in played_cards:
-          card_state[card] = CARD_PLAYED
+        card_state[card] = CARD_PLAYED
       for card in myHandCards:
-          card_state[card] = IN_MY_HAND
+        card_state[card] = IN_MY_HAND
       
       #current
       #table = Table() #time consuming 
@@ -716,24 +782,17 @@ class Algorithm:
       max = 0
       ind = 0
       npc = NPC(card_state0, table)
-      moves = npc.cal_possible_moves(toBeat)
 
+      moves = []
+      if len(toBeat) == 0:
+        moves = npc.cal_good_selfplay_moves()
+      else:
+        moves = npc.cal_possible_moves(toBeat)
       
-      times = min(len(moves), SAMPLE_LOOP)
-      print(f"possible_moves_num_x1:{times}\n")
+      times = min(len(moves),SAMPLE_LOOP)
+      print(f"possible_moves_num_x4:{times}\n")
       if times == 0:
         return [], myData
-      
-      #add for special process
-      # if len(toBeat) == 0:
-      #   move_length = 0
-      #   move_index = 0
-      #   #find the longest
-      #   for i in range(len(moves)):
-      #     if(len(moves[i])>move_length):
-      #       move_length = len(moves[i])
-      #       move_index = i
-      #   return moves[move_index], myData
 
       #this loop decide which cards to play
       for i in range(times):
