@@ -83,3 +83,35 @@ def test2():
   cards, data = al.getAction(state)
 
   return cards, data
+
+def test3():
+  al = Algorithm()
+
+  myPlayerNum = 1
+  playerlist = []
+  for i in range(4):
+    player = Player()
+    player.handSize = 13
+    playerlist.append(player)
+  playerlist[3].handSize = 8
+  
+  myHand = ['8H', '9H', 'AH', 'KH', '4S', '6C', 'QH', 'TD', 'AS', '9C', '2H', '8C', 'TH']
+
+  toBeat = Trick(3, ['AC', 'QS', 'JD', 'KD', 'TS'])
+  matchHistory = []
+
+  history1 = GameHistory()
+  history1.winnerPlayerNum = -1
+  history1.finished = False
+  history1.gameHistory = []
+  round = []
+  trick1 = Trick(0, ['AC', 'QS', 'JD', 'KD', 'TS'])
+  round.append(trick1)
+  history1.gameHistory.append(round)
+
+  matchHistory.append(history1)
+  myData = ""
+  state = MatchState(myPlayerNum,playerlist,myHand,toBeat, matchHistory, myData)
+  cards, data = al.getAction(state)
+
+  return cards, data

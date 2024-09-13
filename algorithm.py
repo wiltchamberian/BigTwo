@@ -31,11 +31,11 @@ EQUAL = 0
 GREATER = 1
 
 NOTHING = -1
-STRAIGHT = 0 #顺子
-FLUSH = 1 #同花
-FOUR_OF_A_KIND = 2 #炸
-FULL_HOUSE = 3 #3带2
-STRAIGHT_FLUSH = 4 #同花顺
+STRAIGHT = 0 
+FLUSH = 1 
+FOUR_OF_A_KIND = 2 
+FULL_HOUSE = 3 
+STRAIGHT_FLUSH = 4 
 
 NPC0_WIN = 0
 NPC1_WIN = 1
@@ -328,12 +328,12 @@ class NPC:
     if cards == None or len(cards) == 0:
       for i in range(0, 52):
         if self.card_state[i] == IN_MY_HAND:
-          output.append((i))
+          output.append([i])
     else:
       card = cards[0]
       for i in range(card + 1,52):
         if self.card_state[i] == IN_MY_HAND:
-          output.append((i))
+          output.append([i])
     return output
   
   def cal_two_cards_moves(self, cards):
@@ -347,7 +347,7 @@ class NPC:
         if self.card_state[i] == IN_MY_HAND:
           for j in range(i - 1,i-(i%4)-1, -1):   
             if self.card_state[j] == IN_MY_HAND:
-              output.append((i,j))
+              output.append([i,j])
     return output
       
   def cal_three_cards_moves(self, cards):
@@ -356,25 +356,25 @@ class NPC:
       rank = 0
       l = 3
     else:
-      rank = self.get_rank(cards[0])
+      rank = get_rank(cards[0])
       l = rank+4 - (rank%4) +3
     for i in range(l, 52, 4):
       if(self.card_state[i-3]==IN_MY_HAND
           and self.card_state[i-2]==IN_MY_HAND
           and self.card_state[i-1]==IN_MY_HAND):
-        output.append((i-1,i-2,i-3))
+        output.append([i-1,i-2,i-3])
       if(self.card_state[i] == IN_MY_HAND
           and self.card_state[i-3]==IN_MY_HAND
           and self.card_state[i-2] == IN_MY_HAND):
-        output.append((i, i-2,i-3))
+        output.append([i, i-2,i-3])
       if(self.card_state[i] == IN_MY_HAND
           and self.card_state[i-3] == IN_MY_HAND
           and self.card_state[i-1] == IN_MY_HAND):
-        output.append((i,i-3,i-1))
+        output.append([i,i-3,i-1])
       if(self.card_state[i] == IN_MY_HAND
           and self.card_state[i-1] == IN_MY_HAND
           and self.card_state[i-2] == IN_MY_HAND):
-        output.append((i,i-1,i-2))
+        output.append([i,i-1,i-2])
     return output
   
   def contain(self, cards, flag):
@@ -389,7 +389,7 @@ class NPC:
 
   def cal_straight_new(self, handGroup, cards):
     output = []
-    if len(cards) == 0:
+    if cards == None or len(cards) == 0:
       if len(handGroup) < 5:
         return []
       else:
@@ -425,7 +425,7 @@ class NPC:
       
       for j in range(4, len(flushGroup[i])):
         if flushGroup[i][j] > cards[-1]:
-          return [flushGroup[i][j:j+5]]
+          return [flushGroup[i][j-4:j+1]] #FIXED
 
     return output
 
@@ -441,6 +441,7 @@ class NPC:
             else:
               if compare5_full_house(tmp, cards) == GREATER:
                 output.append(tmp)
+    return output
               
   
   def cal_four_in_a_kind_new(self, handGroup, cards):
@@ -666,7 +667,6 @@ class Algorithm:
       action = []             # The cards you are playing for this trick
       myData = state.myData   # Communications from the previous iteration
 
-      # TODO Write your algorithm logic here
       myHandCards = self.transform_in(state.myHand)
       if(len(state.matchHistory) == 0):
         print("len(state.matchHistory)==0!\n")
@@ -692,9 +692,13 @@ class Algorithm:
 
       card_state0 = [CARD_PLAYED] * 52
       for card in myHandCards:
-          card_state0[card] = IN_MY_HAND
+        card_state0[card] = IN_MY_HAND
       
-      toBeat = self.transform_in(state.toBeat.cards)
+      toBeat = []
+      if state.toBeat == None:
+        toBeat = []
+      else: 
+        toBeat = self.transform_in(state.toBeat.cards)
       
       other_cards = get_other_cards(card_state)
       card_number = len(other_cards)
@@ -713,13 +717,29 @@ class Algorithm:
       ind = 0
       npc = NPC(card_state0, table)
       moves = npc.cal_possible_moves(toBeat)
+
+      
       times = min(len(moves), SAMPLE_LOOP)
-      print(f"possible_moves_num:{times}\n")
+      print(f"possible_moves_num_x1:{times}\n")
       if times == 0:
         return [], myData
+      
+      #add for special process
+      # if len(toBeat) == 0:
+      #   move_length = 0
+      #   move_index = 0
+      #   #find the longest
+      #   for i in range(len(moves)):
+      #     if(len(moves[i])>move_length):
+      #       move_length = len(moves[i])
+      #       move_index = i
+      #   return moves[move_index], myData
+
       #this loop decide which cards to play
       for i in range(times):
         cards = npc.legal_random(toBeat)
+        #cards = moves[len(moves)-i-1]
+
         strategies.append(cards)
         if cards == None:
           #this means can't beat, so only choice is pass
