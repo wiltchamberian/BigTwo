@@ -68,6 +68,13 @@ def sort_strategy(strategy):
   strategy = sorted(strategy, key = cmp_to_key(strategy_compare))
   return strategy
 
+def strategy_of_length_n_number(strategy, n):
+  t = 0
+  for s in strategy:
+    if len(s) == n:
+      t+=1
+  return t
+
 def compare_one(a1, a2):
   rank1 = get_rank(a1[0])
   suit1 = get_suit(a1[0])
@@ -1265,15 +1272,24 @@ class NewNPC:
     if lenToBeat == 0:
       use_number = 10
       use_number = min(use_number, len(box))
-      ind = 0
+      ind = -1
       max = -1000
       for i in range(use_number):
+        n4 = strategy_of_length_n_number(box[i],4)
+        if n4 * 4 >= len(myHandCards):
+          continue
+
         value = cal_box_value(box[i])
         if max < value:
           max= value 
           ind = i
-      chosen = choose_from_one_strategy(box[ind], otherHands, players, myPlayerNum)
-      return transform_out(chosen), myData
+
+      if ind != -1:
+        chosen = choose_from_one_strategy(box[ind], otherHands, players, myPlayerNum)
+        return transform_out(chosen), myData
+      else:
+        print("dont know how to play")
+        raise Exception("don't know how to play")
     elif lenToBeat == 1:
       for i in range(min(rl,len(box))):
         strategy = box[i]
