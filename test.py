@@ -95,8 +95,8 @@ def test3():
     playerlist.append(player)
   playerlist[0].handSize = 8
   
-  myHand = ['KC', 'KS', '9D', '3H', '8H', 'KD', 'JH', 'TH', 'AS', '6C', '5S', '6S', '9S']
-  toBeat = Trick(3, ['2D', 'JD', '8D', '5D', 'QD'])
+  myHand = ['AD', '6C', 'JD', '8S', '3H', '3D', 'KH', 'JC', '9S', '7C', '5H', 'QC', '6H']
+  toBeat = Trick(3, ['7D', '8H', '9H', 'TD', 'JS'])
   matchHistory = []
 
   history1 = GameHistory()
@@ -104,7 +104,7 @@ def test3():
   history1.finished = False
   history1.gameHistory = []
   round = []
-  trick1 = Trick(0, ['2D', 'JD', '8D', '5D', 'QD'])
+  trick1 = Trick(0, ['7D', '8H', '9H', 'TD', 'JS'])
   round.append(trick1)
   history1.gameHistory.append(round)
 
@@ -114,3 +114,51 @@ def test3():
   cards, data = al.getAction(state)
 
   return cards, data
+
+
+def test4():
+  input = [ '4C','5H', '6C','7D', '8C', '8H', 'TH','QC', 'QH','KH','AC','AS','2C']
+  al = Algorithm()
+  handCards = transform_in(input)
+  npc = NewNPC()
+  box = npc.cal_good_composites(handCards)
+  output =transform_box_number_to_box_character(box)
+  
+  print(box)
+  print(output)
+
+def test5():
+  input = ['8D', '6S', 'JH', 'TS',  'KS', '9S', 'TD', '5S' , '8H']
+  al = Algorithm()
+  handCards = transform_in(input)
+
+  npc = NewNPC()
+  box = npc.cal_good_composites(handCards)
+  output =transform_box_number_to_box_character(box)
+  
+  print(box)
+  print(output)
+
+def test6():
+  input = ['9H', 'JD', 'QD', 'KC', '9D', '8D', '9S', 'KS', '7D', 'JS', '5S', '3D', 'TS']
+  al = Algorithm()
+  handCards = transform_in(input)
+
+  npc = NewNPC()
+  box = npc.cal_good_composites(handCards)
+  output =transform_box_number_to_box_character(box)
+  
+  print(box)
+  print(output)
+
+def npc_test(input):
+  al = Algorithm()
+  handCards = transform_in(input)
+
+  npc = NewNPC()
+  box = npc.cal_good_composites(handCards)
+  output =transform_box_number_to_box_character(box)
+  
+  print(box)
+  print(output)
+  return output

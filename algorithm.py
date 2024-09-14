@@ -2,10 +2,12 @@ from classes import *
 
 
 import copy
-
+from functools import cmp_to_key
 #####################helper#########################
 import random 
 
+
+CARD_3D = 0
 
 IN_MY_HAND = 0
 IN_OTHER_HAND = 1
@@ -45,7 +47,196 @@ SAMPLE_LOOP = 10
 MCTS_LOOP = 10 
 TREE_SEARCH = 10
 
+ranks = ['3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A', '2']
+suits = ['D', 'C', 'H', 'S']
 
+def get_rank(a):
+  return a//4
+
+def get_suit(a):
+  return a%4
+
+def func_strategy_compare(l, r):
+  if len(l) < len(r):
+    return LESS
+  elif len(l) > len(r):
+    return GREATER
+  
+  compare_two(l,r)
+
+def sort_strategy(strategy):
+  strategy = sorted(strategy, key = cmp_to_key(strategy_compare))
+  return strategy
+
+def compare_one(a1, a2):
+  rank1 = get_rank(a1[0])
+  suit1 = get_suit(a1[0])
+  rank2 = get_rank(a2[0])
+  suit2 = get_suit(a2[0])
+  if rank1 < rank2:
+    return LESS
+  elif rank1 > rank2:
+    return GREATER
+  elif suit1 < suit2:
+    return LESS
+  elif suit1 > suit2:
+    return GREATER
+  else:
+    return EQUAL
+  return EQUAL
+
+def compare_two(a1,a2):
+  rank1 = get_rank(a1[0])
+  suit1 = max(get_suit(a1[0]),get_suit(a1[1]))
+  rank2 = get_rank(a2[0])
+  suit2 = max(get_suit(a2[0]),get_suit(a2[1])) 
+  if rank1 < rank2:
+    return LESS
+  elif rank1 > rank2:
+    return GREATER
+  elif suit1 < suit2:
+    return LESS
+  elif suit1 > suit2:
+    return GREATER
+  else:
+    return EQUAL   
+  
+def compare_three(a1, a2):
+  rank1 = get_rank(a1[0])
+  rank2 = get_rank(a2[0])
+  if rank1 < rank2:
+    return LESS
+  elif rank1 > rank2:
+    return GREATER
+  else:
+    return EQUAL
+  
+def compare_five(a1, a2):
+  card_type1 = card5_type(a1)
+  card_type2 = card5_type(a2)
+  if card_type1 < card_type2:
+    return LESS
+  elif card_type1 > card_type2:
+    return GREATER
+  else:
+    if card_type1 == STRAIGHT:
+      return compare5_straight(a1,a2)
+    elif card_type1 == FLUSH:
+      return compare5_flush(a1,a2)
+    elif card_type1 == FULL_HOUSE:
+      return compare5_full_house(a1,a2)
+    elif card_type1 == FOUR_OF_A_KIND:
+      return compare5_four_of_a_kind(a1,a2)
+    elif card_type1 == STRAIGHT_FLUSH:
+      return compare5_straight_flush(a1,a2)
+    else:
+      raise Exception("card5_type_nothing!\n")  
+
+def strategy_compare(a1, a2):
+  if len(a1) < len(a2):
+    return LESS
+  elif len(a1) > len(a2):
+    return GREATER
+  
+  length = len(a1)
+  if length == 1:
+    return compare_one(a1,a2)
+  elif length == 2:
+    return compare_two(a1,a2)
+  elif length == 3:
+    return compare_three(a1,a2)
+  elif length == 5:
+    return compare_five(a1,a2)
+
+  return EQUAL
+ 
+def compare(a1,a2):
+  if len(a1) != len(a2):
+    print("compare_unequal_length\n")
+    raise Exception("compare_unequal_length\n")
+  
+  length = len(a1)
+  if length == 1:
+    return compare_one(a1,a2)
+  elif length == 2:
+    return compare_two(a1,a2)
+  elif length == 3:
+    return compare_three(a1,a2)
+  elif length == 5:
+    return compare_five(a1,a2)
+
+  raise Exception("compare_unequal_length\n")
+
+def transform_in(myHand):
+  output = []
+  for i in range(len(myHand)):
+      card = myHand[i]
+      id = ranks.index(card[0])*4+suits.index(card[1])
+      output.append(id)
+  output = sorted(output)
+  return output
+
+def transform_out(cards):
+  output = []
+  for i in range(len(cards)):
+    card = cards[i]
+    rank = get_rank(card)
+    suit = get_suit(card)
+    output.append(f'{ranks[rank]}{suits[suit]}')
+  return output
+
+def cal_box_value(box):
+  return -len(box) #FIXME
+
+def sort_box_by_length(box):
+  return sorted(box, key=len)
+
+def transform_box_number_to_box_character(box):
+  output = []
+  for i in range(len(box)):
+    output.append([])
+    for j in range(len(box[i])):
+      output[i].append([])
+      for k in range(len(box[i][j])):
+        rank=  get_rank(box[i][j][k])
+        suit = get_suit(box[i][j][k])
+        output[i][j].append(f'{ranks[rank]}{suits[suit]}')
+  return output
+
+
+def sub_cards(handCards, move):
+  output = []
+  for hand in handCards:
+    bingo = False
+    for m in move:
+      if hand == m:
+        bingo = True
+        break
+    if bingo == False:
+      output.append(hand)
+  return output
+
+#divide hand cards according to ranks
+def make_hand_group(myHandCards):
+  handGroup = []
+  group = []
+  for i in range(len(myHandCards)):
+    if len(group)==0 or get_rank(myHandCards[i])==get_rank(group[0]):
+      group.append(myHandCards[i])
+    else:
+      handGroup.append(copy.deepcopy(group))
+      group = [myHandCards[i]]
+  if len(group) > 0:
+    handGroup.append(group)
+  return handGroup
+
+#dividing handcards according to suit
+def make_flush_group(myHandCards):
+  myFlushGroup = [[],[],[],[]] #group according to suit
+  for i in range(len(myHandCards)):
+    suit = get_suit(myHandCards[i])
+    myFlushGroup[suit].append(myHandCards[i])
+  return myFlushGroup
 
 def create_ordered_cards():
   cards = [0] * 52
@@ -58,14 +249,13 @@ def create_shuffled_cards():
   random.shuffle(cards)
   return cards
 
-def get_rank(a):
-  return a//4
-
-def get_suit(a):
-  return a%4
-
 def compare5_straight(left, right):
-  return left[4] < right[4]
+  if left[4] < right[4]:
+    return LESS 
+  elif left[4] > right[4]:
+    return GREATER
+  else:
+    return EQUAL
 
 def compare5_flush(left, right):
   left_keys = [get_suit(l) for l in left] + [get_rank(l) for l in left]
@@ -98,7 +288,7 @@ def compare5_full_house(left,right):
     l = left[2]
   else:
     l = left[4]
-  if right[2]//4 == right[2]//4:
+  if right[2]//4 == right[1]//4:
     r = right[2]
   else:
     r = right[4]
@@ -149,7 +339,7 @@ def binary_search(composites, composite, compare_func):
 def card5_type(sorted_cards):
   card_type = NOTHING
   ranks = [get_rank(card) for card in sorted_cards]
-  if ranks[1] == ranks[0]+1 and ranks[2] == ranks[1]+1:
+  if ranks[1] == ranks[0]+1 and ranks[2] == ranks[1]+1 and ranks[3] == ranks[2]+1 and ranks[4] == ranks[3] + 1:
     card_type = STRAIGHT
     suits = [get_suit(card) for card in sorted_cards]
     if suits[0]==suits[1] and suits[0] == suits[2] and suits[0]==suits[3] and suits[0] == suits[4]:
@@ -161,7 +351,7 @@ def card5_type(sorted_cards):
     return card_type
   
   if((ranks[0] == ranks[1] and ranks[0] == ranks[2] and ranks[3]== ranks[4]) or (ranks[0]==ranks[1] and ranks[2]==ranks[3] and ranks[3] == ranks[4])):
-    card_type == FULL_HOUSE
+    card_type = FULL_HOUSE
     return card_type
   
   suits = [get_suit(card) for card in sorted_cards]
@@ -244,6 +434,83 @@ def calculate_value(times, win):
   elif win == NPC1_WIN:
     value += times
   return value
+
+def choose_from_one_strategy(strategy , other_hands, players, myPlayerId):
+  #consider simulate here
+  sg2 = sort_strategy(strategy)
+  
+  g1 = []
+  g2 =[]
+  g3= []
+  g4 =[]
+  g5=[]
+  for move in sg2:
+    if len(move)==1:
+      g1.append(move)
+    elif len(move)==2:
+      g2.append(move)
+    elif len(move)==3:
+      g3.append(move)
+    elif len(move)==4:
+      g4.append(move)
+    elif len(move)==5:
+      g5.append(move)
+  
+  number_of_one_card_in_four_kind = 0
+  number_of_two_cards_in_full_house = 0
+
+  candidates = []
+  if len(g1) > 0:
+    card = g1[-1]
+    if other_hands != None and len(other_hands) > 0: 
+      re = compare_one(card, [other_hands[-1]])
+      if re == GREATER:
+        if len(g4) == 0:
+          if len(g1) == 1:
+            return g1[-1]
+          else: 
+            return g1[0]
+        else:
+          mid = g1[0] + g4[0]
+          number_of_one_card_in_four_kind += 1
+          candidates.append(mid)
+      else:
+        if len(g4) > 0:
+          candidates.append(g1[0] + g4[0])
+          number_of_one_card_in_four_kind += 1
+
+  npc = NewNPC()
+  if len(g2) > 0:
+    if len(g3) > 0:
+      candidates.append(g2[0] + g3[0])
+      number_of_two_cards_in_full_house += 1
+    else:
+      if other_hands != None and len(other_hands)>0: 
+        two_groups = npc.cal_two_cards(other_hands)
+        if (len(two_groups)==0):
+          candidates.append(g2[0])
+        else:
+          if compare_two(g2[-1], two_groups[-1]) == GREATER:
+            candidates.append(g2[0])
+          else:
+            pass
+  for i in range(len(sg2)-1,-1,-1):
+    if len(sg2[i]) != 4:
+      candidates.append(sg2[i])
+      break
+
+  if len(g1)-number_of_one_card_in_four_kind >= 2:
+    return g1[number_of_one_card_in_four_kind]
+  elif len(g2) - number_of_two_cards_in_full_house >= 2:
+    return g2[number_of_two_cards_in_full_house]
+
+  if len(candidates) == 0:
+    print("candidate_number_zero!\n")
+    return []
+  
+  choice = random.randint(0, len(candidates)-1)
+  return candidates[choice]
+
 
 class Table:
   def __init__(self):
@@ -397,29 +664,26 @@ class NPC:
 
   def cal_straight_new(self, handGroup, cards):
     output = []
-    if cards == None or len(cards) == 0:
-      if len(handGroup) < 5:
-        return []
-      else:
-        for i in range(0, len(handGroup)-4):
-          bingo = True
-          for j in range(i+1, i+5):
-            if get_rank(handGroup[j][0]) != (get_rank(handGroup[j-1][0])+1):
-              bingo = False
-              break
-          if bingo:
-            for c1 in handGroup[i]:
-              for c2 in handGroup[i+1]:
-                for c3 in handGroup[i+2]:
-                  for c4 in handGroup[i+3]:
-                    for c5 in handGroup[i+4]:
-                      playCards = [c1,c2,c3,c4,c5]
-                      if (cards == None or len(cards) == 0):
-                        output.append(playCards)
-                      else:
-                        res = compare5_straight(playCards, cards)
-                        if(res == GREATER):
-                          output.append(playCards)
+
+    for i in range(0, len(handGroup)-4):
+      bingo = True
+      for j in range(i+1, i+5):
+        if get_rank(handGroup[j][0]) != (get_rank(handGroup[j-1][0])+1):
+          bingo = False
+          break
+      if bingo:
+        for c1 in handGroup[i]:
+          for c2 in handGroup[i+1]:
+            for c3 in handGroup[i+2]:
+              for c4 in handGroup[i+3]:
+                for c5 in handGroup[i+4]:
+                  playCards = [c1,c2,c3,c4,c5]
+                  if (cards == None or len(cards) == 0):
+                    output.append(playCards)
+                  else:
+                    res = compare5_straight(playCards, cards)
+                    if(res == GREATER):
+                      output.append(playCards)
     return output     
 
   def cal_flush_new(self, flushGroup, cards):
@@ -527,43 +791,43 @@ class NPC:
 
     return myFlushGroup
 
-  def cal_5card_possible_moves_new(self, cards):
+  def cal_5card_possible_moves_new(self, toBeat):
     #group according to rank
     myHandGroup = self.make_handGroup()
     #group according to suit
     myFlushGroup = self.make_flushGroup()
 
     output = []
-    if cards == None or len(cards) == 0:
-      output += self.cal_straight_new(myHandGroup, cards)
-      output += self.cal_flush_new(myFlushGroup, cards)
-      output += self.cal_full_house_new(myHandGroup, cards)
-      output += self.cal_four_in_a_kind_new(myHandGroup, cards)
-      output += self.cal_straight_flush_new(myFlushGroup, cards)
+    if toBeat == None or len(toBeat) == 0:
+      output += self.cal_straight_new(myHandGroup, toBeat)
+      output += self.cal_flush_new(myFlushGroup, toBeat)
+      output += self.cal_full_house_new(myHandGroup, toBeat)
+      output += self.cal_four_in_a_kind_new(myHandGroup, toBeat)
+      output += self.cal_straight_flush_new(myFlushGroup, toBeat)
       return output
      
-    cards = sorted(cards)
-    type = card5_type(cards)
+    toBeat = sorted(toBeat)
+    type = card5_type(toBeat)
     if type == STRAIGHT:
-      output += self.cal_straight_new(myHandGroup, cards)
+      output += self.cal_straight_new(myHandGroup, toBeat)
       output += self.cal_flush_new(myFlushGroup, [])
       output += self.cal_full_house_new(myHandGroup, [])
       output += self.cal_four_in_a_kind_new(myHandGroup, [])
       output += self.cal_straight_flush_new(myFlushGroup, [])
     elif type == FLUSH:
-      output += self.cal_flush_new(myFlushGroup, cards)
+      output += self.cal_flush_new(myFlushGroup, toBeat)
       output += self.cal_full_house_new(myHandGroup, [])
       output += self.cal_four_in_a_kind_new(myHandGroup, [])
       output += self.cal_straight_flush_new(myFlushGroup, [])
     elif type == FULL_HOUSE:
-      output += self.cal_full_house_new(myHandGroup, cards)
+      output += self.cal_full_house_new(myHandGroup, toBeat)
       output += self.cal_four_in_a_kind_new(myHandGroup, [])
       output += self.cal_straight_flush_new(myFlushGroup, [])
     elif type == FOUR_OF_A_KIND:
-      output += self.cal_four_in_a_kind_new(myHandGroup, cards)
+      output += self.cal_four_in_a_kind_new(myHandGroup, toBeat)
       output += self.cal_straight_flush_new(myFlushGroup, [])
     elif type == STRAIGHT_FLUSH:
-      output += self.cal_straight_flush_new(myFlushGroup, cards)
+      output += self.cal_straight_flush_new(myFlushGroup, toBeat)
 
     return output
   
@@ -614,6 +878,14 @@ class NPC:
       return output  
 
     return output
+  
+  def cal_good_compositions(self, myHand):
+    handGroup = self.make_handGroup()
+    flushGroup = self.make_flushGroup()
+    compositions = []
+    
+    self.deep_call(myHand, compositions)
+    return compositions
 
   def cal_possible_moves(self, cards):
     output = []
@@ -688,62 +960,39 @@ class NPC:
 
 
 ###################algorithm##################
-ranks = ['3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A', '2']
-suits = ['D', 'C', 'H', 'S']
 
 class Algorithm:
-
-    def transform_in(self, myHand):
-      output = []
-      for i in range(len(myHand)):
-          card = myHand[i]
-          id = ranks.index(card[0])*4+suits.index(card[1])
-          output.append(id)
-      output = sorted(output)
-      return output
-    
-    def transform_out(self, cards):
-      output = []
-      for i in range(len(cards)):
-        card = cards[i]
-        rank = get_rank(card)
-        suit = get_suit(card)
-        output.append(f'{ranks[rank]}{suits[suit]}')
-      return output
-
-    def make_hand_group(self, myHandCards):
-      handGroup = []
-      group = []
-      for i in range(len(myHandCards)):
-        if len(group)==0 or get_rank(myHandCards)==get_rank(group[0]):
-          group.append(myHandCards[i])
-        else:
-          handGroup.append(group)
-          group.append(i)
-      return handGroup
-    
-    def make_flush_group(self, myHandCards):
-      myFlushGroup = [[],[],[],[]] #group according to suit
-      for i in range(len(myHandCards)):
-        suit = get_suit(myHandCards[i])
-        myFlushGroup[suit].append(myHandCards[i])
-      return myFlushGroup
     
     def getAction(self, state: MatchState):
+      print("ALV2.8")
       action = []             # The cards you are playing for this trick
       myData = state.myData   # Communications from the previous iteration
 
-      myHandCards = self.transform_in(state.myHand)
+      myHandCards = transform_in(state.myHand)
       if(len(state.matchHistory) == 0):
         print("len(state.matchHistory)==0!\n")
         return action, myData 
+      
+      toBeat = []
+      if state.toBeat == None:
+        toBeat = []
+      else: 
+        toBeat = transform_in(state.toBeat.cards)
+      lenToBeat = len(toBeat)
       
       gameHistory = state.matchHistory[-1]
       rounds = gameHistory.gameHistory
       played_cards = []
       for i in range(len(rounds)):
         for trick in rounds[i]:
-          played_cards += self.transform_in(trick.cards)
+          played_cards += transform_in(trick.cards)
+
+      first_round_first_play = False
+      if len(rounds)==0 and len(toBeat) == 0:
+        #in this case, must be i am first:
+        first_round_first_play = True
+        print("first_round_first_play\n")
+
 
       #formulate the state:
       card_state = [IN_OTHER_HAND] * 52
@@ -751,6 +1000,10 @@ class Algorithm:
         card_state[card] = CARD_PLAYED
       for card in myHandCards:
         card_state[card] = IN_MY_HAND
+      other_hands = []
+      for i in range(52):
+        if card_state[i] == IN_OTHER_HAND:
+          other_hands.append(i)
       
       #current
       #table = Table() #time consuming 
@@ -760,11 +1013,7 @@ class Algorithm:
       for card in myHandCards:
         card_state0[card] = IN_MY_HAND
       
-      toBeat = []
-      if state.toBeat == None:
-        toBeat = []
-      else: 
-        toBeat = self.transform_in(state.toBeat.cards)
+
       
       other_cards = get_other_cards(card_state)
       card_number = len(other_cards)
@@ -783,11 +1032,13 @@ class Algorithm:
       ind = 0
       npc = NPC(card_state0, table)
 
-      moves = []
-      if len(toBeat) == 0:
-        moves = npc.cal_good_selfplay_moves()
-      else:
-        moves = npc.cal_possible_moves(toBeat)
+      npc = NewNPC()
+      return npc.play_card(myHandCards, other_hands, toBeat, state.myPlayerNum, state.players, myData, first_round_first_play)
+      
+      #if comes here, just pass
+      return [], myData
+      
+      #moves = npc.cal_possible_moves(toBeat)
       
       times = min(len(moves),SAMPLE_LOOP)
       print(f"possible_moves_num_x4:{times}\n")
@@ -849,7 +1100,228 @@ class Algorithm:
           ind = i
         
       final_move = strategies[ind]
-      action = self.transform_out(final_move)
+      action = transform_out(final_move)
 
 
       return action, myData
+    
+
+class NewNPC: 
+  def __init__(self):
+    pass 
+
+  def cal_good_composites(self, handCards):
+    box = []
+    current = []
+    self.deep_search5(handCards,current, box)
+    box = sorted(box,key=len)
+    return box
+    
+  def deep_search1(self, handCards, current, box):
+    moves = self.cal_one_cards(handCards)
+    current += moves
+    box.append(current)
+    return
+
+  def deep_search2(self, handCards, current, box):
+    if len(handCards) >= 2:
+      moves = self.cal_two_cards(handCards)
+      for move in moves:
+        newCards = sub_cards(handCards, move)
+        newCurrent = copy.deepcopy(current)
+        newCurrent.append(move)
+        self.deep_search2(newCards, newCurrent, box)
+      
+    self.deep_search1(handCards, current, box)
+    return  
+      
+  def deep_search3(self, handCards, current, box):
+    if len(handCards) >= 3:
+      moves = self.cal_three_cards(handCards)
+      for move in moves:
+        newCards = sub_cards(handCards, move)
+        newCurrent = copy.deepcopy(current)
+        newCurrent.append(move)
+        if len(newCards) == 0:
+          box.append(newCurrent)
+          return
+        self.deep_search3(newCards, newCurrent, box)
+      
+    self.deep_search2(handCards, current, box)
+
+  def deep_search4(self, handCards, current, box):
+    if len(handCards) >= 4:
+      moves = self.cal_four_cards(handCards)
+      for move in moves:
+        newCards = sub_cards(handCards, move)
+        newCurrent = copy.deepcopy(current)
+        newCurrent.append(move)
+        self.deep_search4(newCards, newCurrent, box)
+      
+    self.deep_search3(handCards, current, box)
+    return 
+  
+  def deep_search5(self, handCards, current, box):
+    if(len(handCards) >=5):
+      moves = self.cal_straight_and_flush(handCards)
+      for move in moves:
+        newCards = sub_cards(handCards, move)
+        newCurrent = copy.deepcopy(current)
+        newCurrent.append(move)
+        self.deep_search5(newCards, newCurrent, box)
+      
+    self.deep_search4(handCards, current, box)
+    return 
+
+  def cal_one_cards(self, handCards):
+    output = []
+    for card in handCards:
+      output.append([card])
+    return output
+
+  def cal_two_cards(self, handCards):
+    output = []
+    handGroup = make_hand_group(handCards)
+    for group in handGroup:
+      for i in range(len(group)-1):
+        for j in range(i+1, len(group)):
+          output.append([group[i],group[j]])
+    return output
+
+  def cal_three_cards(self, handCards):
+    output = []
+    handGroup = make_hand_group(handCards)
+    for group in handGroup:
+      for i in range(len(group)-2):
+        for j in range(i+1, len(group)-1):
+          for k in range(j+1, len(group)):
+            output.append([group[i],group[j],group[k]])
+    return output
+
+  def cal_four_cards(self, handCards):
+    output = []
+    handGroup = make_hand_group(handCards)
+    for group in handGroup:
+      if len(group) == 4:
+        output.append(group)
+    return output
+
+  def cal_straight_and_flush(self, handCards):
+    handGroup = make_hand_group(handCards)
+    flushGroup = make_flush_group(handCards)
+    output = self.cal_flush(flushGroup)
+    output2 = self.cal_straight(handGroup)
+    return output + output2
+
+  def cal_straight(self, handGroup):
+    output = []
+    for i in range(0, len(handGroup)-4):
+      bingo = True
+      for j in range(i+1, i+5):
+        if get_rank(handGroup[j][0]) != (get_rank(handGroup[j-1][0])+1):
+          bingo = False
+          break
+      if bingo:
+        for c1 in handGroup[i]:
+          for c2 in handGroup[i+1]:
+            for c3 in handGroup[i+2]:
+              for c4 in handGroup[i+3]:
+                for c5 in handGroup[i+4]:
+                  playCards = [c1,c2,c3,c4,c5]
+                  output.append(playCards)
+    return output   
+  
+  def cal_flush(self, flushGroup):
+    output = []
+    for i in range(0,len(flushGroup)):
+      m = flushGroup[i]
+      length = len(m)
+      if length <= 9:
+        for j1 in range(0,length-4):
+          for j2 in range(j1+1,length-3):
+            for j3 in range(j2+1,length-2):
+              for j4 in range(j3+1,length-1):
+                for j5 in range(j4+1,length):
+                  output.append([m[j1],m[j2],m[j3],m[j4],m[j5]])
+      else:
+        print("npc_new__cal_flush_length:%d\n", length)
+        for j in range(0, len(flushGroup[i])-4, 1):
+          output.append(flushGroup[i][j:j+5])
+    return output
+  
+  def play_card(self, myHandCards, otherHands, toBeat, myPlayerNum, players = [], myData = "", first_round_first_play = False):  
+    lenToBeat = len(toBeat) 
+
+    box = self.cal_good_composites(myHandCards)
+
+    if first_round_first_play:
+      for i in range(len(box)):
+        strategy = box[i]
+        for s in strategy:
+          if CARD_3D in s:
+            return transform_out(s), myData
+    
+    rl =  20
+    if lenToBeat == 0:
+      use_number = 10
+      use_number = min(use_number, len(box))
+      ind = 0
+      max = -1000
+      for i in range(use_number):
+        value = cal_box_value(box[i])
+        if max < value:
+          max= value 
+          ind = i
+      chosen = choose_from_one_strategy(box[ind], otherHands, players, myPlayerNum)
+      return transform_out(chosen), myData
+    elif lenToBeat == 1:
+      for i in range(min(rl,len(box))):
+        strategy = box[i]
+        for s in strategy:
+          if len(s) == 1:
+            if GREATER ==  compare_one(s,toBeat):
+              return transform_out(s),myData
+    elif lenToBeat == 2:
+      for i in range(min(rl,len(box))):
+        strategy = box[i]
+        for s in strategy:
+          if len(s) == 2 and GREATER ==  compare_two(s,toBeat):
+            return transform_out(s),myData
+    elif lenToBeat ==3:
+      for i in range(min(rl,len(box))):
+        strategy = box[i]
+        for s in strategy:
+          if len(s) == 3 and GREATER ==  compare_three(s,toBeat):
+            return transform_out(s),myData       
+    elif lenToBeat == 5:
+      card_type = card5_type(toBeat)
+      for i in range(min(rl,len(box))):
+        strategy = box[i]
+        for s in strategy:
+          if len(s) == 5:
+            if GREATER == compare_five(s, toBeat):
+              compare_five(s, toBeat)
+              return transform_out(s),myData
+      #for full house
+      for i in range(min(rl,len(box))):
+        strategy = box[i]
+        for s in strategy:
+          if len(s) == 3: #for full house
+            for s1 in strategy:
+              if len(s1) == 2:
+                mid = sorted(s + s1)
+                if GREATER == compare_five(mid, toBeat):
+                  return transform_out(mid), myData
+      for i in range(min(rl,len(box))):
+        strategy = box[i]
+        for s in strategy:
+          if len(s) == 4: #for 4 in a kind
+            for s1 in strategy:
+              if len(s1) == 1:
+                mid = sorted(s + s1)
+                if GREATER == compare_five(mid, toBeat):
+                  return transform_out(mid), myData               
+    else:
+      raise Exception('lenToBeat:%d!\n',lenToBeat)
+    
+    return [],myData

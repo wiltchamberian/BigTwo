@@ -132,29 +132,25 @@ class NPC:
 
   def cal_straight_new(self, handGroup, cards):
     output = []
-    if len(cards) == 0:
-      if len(handGroup) < 5:
-        return []
-      else:
-        for i in range(0, len(handGroup)-4):
-          bingo = True
-          for j in range(i+1, i+5):
-            if get_rank(handGroup[j][0]) != (get_rank(handGroup[j-1][0])+1):
-              bingo = False
-              break
-          if bingo:
-            for c1 in handGroup[i]:
-              for c2 in handGroup[i+1]:
-                for c3 in handGroup[i+2]:
-                  for c4 in handGroup[i+3]:
-                    for c5 in handGroup[i+4]:
-                      playCards = [c1,c2,c3,c4,c5]
-                      if (cards == None or len(cards) == 0):
-                        output.append(playCards)
-                      else:
-                        res = compare5_straight(playCards, cards)
-                        if(res == GREATER):
-                          output.append(playCards)
+    for i in range(0, len(handGroup)-4):
+      bingo = True
+      for j in range(i+1, i+5):
+        if get_rank(handGroup[j][0]) != (get_rank(handGroup[j-1][0])+1):
+          bingo = False
+          break
+      if bingo:
+        for c1 in handGroup[i]:
+          for c2 in handGroup[i+1]:
+            for c3 in handGroup[i+2]:
+              for c4 in handGroup[i+3]:
+                for c5 in handGroup[i+4]:
+                  playCards = [c1,c2,c3,c4,c5]
+                  if (cards == None or len(cards) == 0):
+                    output.append(playCards)
+                  else:
+                    res = compare5_straight(playCards, cards)
+                    if(res == GREATER):
+                      output.append(playCards)
     return output     
 
   def cal_flush_new(self, flushGroup, cards):
