@@ -35,8 +35,8 @@ GREATER = 1
 NOTHING = -1
 STRAIGHT = 0 
 FLUSH = 1 
-FOUR_OF_A_KIND = 2 
-FULL_HOUSE = 3 
+FULL_HOUSE = 2
+FOUR_OF_A_KIND = 3 
 STRAIGHT_FLUSH = 4 
 
 NPC0_WIN = 0
@@ -55,6 +55,57 @@ def get_rank(a):
 
 def get_suit(a):
   return a%4
+
+def split_moves_according_to_length(strategy, n):
+  output = [[],[],[],[],[],[],[]]
+  for move in strategy:
+    output[len(move)].append(move)
+  return output
+
+def cal_move_length_in_strategy(strategy):
+  board = [0,0,0,0,0,0]
+  for move in strategy:
+    board[len(move)] += 1
+  return board
+
+def check_group2_is_greater_or_equal_than_group2(toBeCheck, strategy):
+  l1 = len(toBeCheck)
+  for s in strategy:
+    l2 = len(s)
+    if l1==l2:
+      if l1 == 2:
+        re = compare_two(toBeCheck, s)
+        if re !=  LESS:
+          pass
+        else:
+          return False
+  return True
+
+def check_group3_is_greater_or_equal_than_group3(toBeCheck, strategy):
+  l1 = len(toBeCheck)
+  for s in strategy:
+    l2 = len(s)
+    if l1==l2:
+      if l1 == 3:
+        re = compare_three(toBeCheck, s)
+        if re !=  LESS:
+          pass
+        else:
+          return False
+  return True
+
+def check_group4_is_greater_or_equal_than_group4(toBeCheck, strategy):
+  l1 = len(toBeCheck)
+  for s in strategy:
+    l2 = len(s)
+    if l1==l2:
+      if l1 == 4:
+        re = compare_four(toBeCheck, s)
+        if re !=  LESS:
+          pass
+        else:
+          return False
+  return True
 
 def func_strategy_compare(l, r):
   if len(l) < len(r):
@@ -118,6 +169,16 @@ def compare_three(a1, a2):
   else:
     return EQUAL
   
+def compare_four(a1, a2):
+  rank1 = get_rank(a1)
+  rank2 = get_rank(a2)
+  if rank1 < rank2:
+    return LESS
+  elif rank1 > rank2:
+    return GREATER
+  else:
+    return EQUAL
+  
 def compare_five(a1, a2):
   card_type1 = card5_type(a1)
   card_type2 = card5_type(a2)
@@ -137,6 +198,7 @@ def compare_five(a1, a2):
     elif card_type1 == STRAIGHT_FLUSH:
       return compare5_straight_flush(a1,a2)
     else:
+      print("card5_type_nothing!\n")
       raise Exception("card5_type_nothing!\n")  
 
 def strategy_compare(a1, a2):
@@ -172,6 +234,7 @@ def compare(a1,a2):
   elif length == 5:
     return compare_five(a1,a2)
 
+  print("compare_unequal_length\n")
   raise Exception("compare_unequal_length\n")
 
 def transform_in(myHand):
@@ -300,9 +363,9 @@ def compare5_full_house(left,right):
   else:
     r = right[4]
   if get_rank(l) < get_rank(r):
-    return True
+    return LESS
   elif get_rank(l) > get_rank(r):
-    return False
+    return GREATER
   
   return EQUAL
 
@@ -971,21 +1034,27 @@ class NPC:
 class Algorithm:
     
     def getAction(self, state: MatchState):
-      print("ALV2.8")
-      action = []             # The cards you are playing for this trick
-      myData = state.myData   # Communications from the previous iteration
-
       myHandCards = transform_in(state.myHand)
-      if(len(state.matchHistory) == 0):
-        print("len(state.matchHistory)==0!\n")
-        return action, myData 
-      
+
       toBeat = []
       if state.toBeat == None:
         toBeat = []
       else: 
         toBeat = transform_in(state.toBeat.cards)
       lenToBeat = len(toBeat)
+
+      print(f"ALV2.9_id:{state.myPlayerNum}\n")
+      print(f"p0:{state.players[0].handSize},p1:{state.players[1].handSize},p2:{state.players[2].handSize},p3:{state.players[3].handSize}\n")
+      print(f"MyHands:{transform_out(sorted(myHandCards))}\n")
+      print(f"toBeat:{transform_out(toBeat)}\n")
+
+      action = []             # The cards you are playing for this trick
+      myData = state.myData   # Communications from the previous iteration
+
+      
+      if(len(state.matchHistory) == 0):
+        print("len(state.matchHistory)==0!\n")
+        return action, myData 
       
       gameHistory = state.matchHistory[-1]
       rounds = gameHistory.gameHistory
@@ -1040,7 +1109,7 @@ class Algorithm:
       npc = NPC(card_state0, table)
 
       npc = NewNPC()
-      return npc.play_card(myHandCards, other_hands, toBeat, state.myPlayerNum, state.players, myData, first_round_first_play)
+      return npc.play_card(myHandCards, other_hands, toBeat, state.myPlayerNum, state.players, myData, first_round_first_play, simulate = False)
       
       #if comes here, just pass
       return [], myData
@@ -1116,28 +1185,89 @@ class Algorithm:
 class NewNPC: 
   def __init__(self):
     pass 
-
+  
+  def merge_moves_in_each_strategy(self, box):
+    for i in range(len(box)):
+      mid = box[i]
+      box[i] = []
+      splits = split_moves_according_to_length(mid)
+      l2 = len(splits[2])
+      l3 = len(splits[3])
+      l4 = len(splits[4])
+      l1 = len(splits[1])
+      l5 = len(splits[5])
+      for i in range(min(l1,l4)):
+        box[i].append(sorted(splits[1]+splits[4]))
+      if l1 > l4:
+        for i in range(l4,l1):
+          box[i].append(splits[1])
+      elif l4 > l1:
+        for i in range(l1,l4):
+          box[i].append(splits[4])
+      for i in range(min(l2,l3)):
+        box[i].append(sorted(splits[2]+splits[3]))
+      if l3 > l2:
+        for i in range(l2, l3):
+          box[i].append(splits[3])
+      if l3 < l2:
+        for i in range(l3,l2):
+          box[i].append(splits[2])
+      for i in l5:
+        box[i].append(splits[5])
+      box[i] = sort_strategy(box[i])
+    return 
+  
   def cal_good_composites(self, handCards):
     box = []
     current = []
     self.deep_search5(handCards,current, box)
+
+    #box = sorted(box,key=len)
+
+    #merge 3+2, 4+1 composites
+    #self.merge_moves_in_each_strategy(box)
+
     box = sorted(box,key=len)
+
+    #merge 4 and 1
+    # q_4 = []
+    # q_1 = []
+    # for strategy in box:
+    #   new_strategy = []
+    #   for s in strategy:
+    #     if len(s) == 1:
+    #       q_1.append(s)
+    #     elif len(s) == 4:
+    #       q_4.append(s)
+    #     else:
+    #       new_strategy.append(s) 
+    #   for i in range(min(len(q_4),len(q_1))):
+    #     q_4[i] = q_1[i]
+
     return box
     
   def deep_search1(self, handCards, current, box):
     moves = self.cal_one_cards(handCards)
     current += moves
-    box.append(current)
+
+    #filter num_of_4 > num_of_1 current
+    num_of_1 = strategy_of_length_n_number(current, 1)
+    num_of_4 = strategy_of_length_n_number(current, 4)
+    if (num_of_4 <= num_of_1):
+      box.append(current)
     return
 
   def deep_search2(self, handCards, current, box):
     if len(handCards) >= 2:
       moves = self.cal_two_cards(handCards)
       for move in moves:
-        newCards = sub_cards(handCards, move)
-        newCurrent = copy.deepcopy(current)
-        newCurrent.append(move)
-        self.deep_search2(newCards, newCurrent, box)
+        #add logic to remove permute roles
+        bingo = check_group2_is_greater_or_equal_than_group2(move, current)
+        if bingo:
+          newCards = sub_cards(handCards, move)
+          newCurrent = copy.deepcopy(current)
+          newCurrent.append(move)
+          self.deep_search2(newCards, newCurrent, box)
       
     self.deep_search1(handCards, current, box)
     return  
@@ -1146,13 +1276,19 @@ class NewNPC:
     if len(handCards) >= 3:
       moves = self.cal_three_cards(handCards)
       for move in moves:
-        newCards = sub_cards(handCards, move)
-        newCurrent = copy.deepcopy(current)
-        newCurrent.append(move)
-        if len(newCards) == 0:
-          box.append(newCurrent)
-          return
-        self.deep_search3(newCards, newCurrent, box)
+        bingo = check_group3_is_greater_or_equal_than_group3(move, current)
+        if bingo:
+          newCards = sub_cards(handCards, move)
+          newCurrent = copy.deepcopy(current)
+          newCurrent.append(move)
+          if len(newCards) == 0:
+            #filter num_of_4 > num_of_1 current
+            num_of_1 = strategy_of_length_n_number(newCurrent, 1)
+            num_of_4 = strategy_of_length_n_number(newCurrent, 4)
+            if num_of_4 <= num_of_1:
+              box.append(newCurrent)
+            return
+          self.deep_search3(newCards, newCurrent, box)
       
     self.deep_search2(handCards, current, box)
 
@@ -1160,10 +1296,12 @@ class NewNPC:
     if len(handCards) >= 4:
       moves = self.cal_four_cards(handCards)
       for move in moves:
-        newCards = sub_cards(handCards, move)
-        newCurrent = copy.deepcopy(current)
-        newCurrent.append(move)
-        self.deep_search4(newCards, newCurrent, box)
+        bingo = check_group4_is_greater_or_equal_than_group4(move, current)
+        if bingo:
+          newCards = sub_cards(handCards, move)
+          newCurrent = copy.deepcopy(current)
+          newCurrent.append(move)
+          self.deep_search4(newCards, newCurrent, box)
       
     self.deep_search3(handCards, current, box)
     return 
@@ -1256,8 +1394,14 @@ class NewNPC:
           output.append(flushGroup[i][j:j+5])
     return output
   
-  def play_card(self, myHandCards, otherHands, toBeat, myPlayerNum, players = [], myData = "", first_round_first_play = False):  
+  def play_card(self, myHandCards, otherHands, toBeat, myPlayerNum, players = [], myData = "", first_round_first_play = False, simulate = False):  
     lenToBeat = len(toBeat) 
+
+    minNumCardinOtherHand = 13
+    if simulate == False:
+      for i in range(len(players)):
+        if i!= myPlayerNum:
+          minNumCardinOtherHand = min(minNumCardinOtherHand, players[i].handSize)
 
     box = self.cal_good_composites(myHandCards)
 
@@ -1266,6 +1410,14 @@ class NewNPC:
         strategy = box[i]
         for s in strategy:
           if CARD_3D in s:
+            if len(s) == 5:
+              print("card_3d1\n")
+              return transform_out(s), myData
+            else:
+              for g in strategy:
+                if len(g) == (5-len(s)):
+                  print("card_3d2\n")
+                  return transform_out(s+g),myData
             return transform_out(s), myData
     
     rl =  20
@@ -1293,9 +1445,14 @@ class NewNPC:
     elif lenToBeat == 1:
       for i in range(min(rl,len(box))):
         strategy = box[i]
+        num_1 = strategy_of_length_n_number(strategy,1)
         for s in strategy:
           if len(s) == 1:
             if GREATER ==  compare_one(s,toBeat):
+              if simulate == False and num_1 == 1 and len(otherHands) > 0:
+                fold = self.whether_fold_one(s[0], minNumCardinOtherHand, otherHands)
+                if fold == True:
+                  return [], myData
               return transform_out(s),myData
     elif lenToBeat == 2:
       for i in range(min(rl,len(box))):
@@ -1338,6 +1495,14 @@ class NewNPC:
                 if GREATER == compare_five(mid, toBeat):
                   return transform_out(mid), myData               
     else:
-      raise Exception('lenToBeat:%d!\n',lenToBeat)
+      print("Can't beat!\n")
+      #raise Exception('lenToBeat:%d!\n',lenToBeat)
     
     return [],myData
+  
+  def whether_fold_one(self,one_card, minNumCardinOtherHand, otherHands):
+    print("whether_fold_one!\n")
+    p_max = otherHands[-1]
+    if p_max - one_card > 0 and (p_max - one_card) < 4 and minNumCardinOtherHand > 2 :
+      return True
+    return False 
