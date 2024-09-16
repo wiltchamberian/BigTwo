@@ -1,11 +1,19 @@
 from classes import *
 
+VERSION = "2.17_4"
 
 import copy
 from functools import cmp_to_key
 #####################helper#########################
 import random 
 
+#play_type
+FOLDER = 0
+NOBEAT = 1
+PLAY_CARD = 2
+
+
+BOX_USE_LENGTH = 10
 
 CARD_3D = 0
 
@@ -56,13 +64,22 @@ def get_rank(a):
 def get_suit(a):
   return a%4
 
-def split_moves_according_to_length(strategy, n):
+def get_longest_move_index(strategy):
+  target_index = 0
+  l = 0
+  for i in range(len(strategy)):
+    if len(strategy[i]) > l:
+      l = len(strategy[i])
+      target_index = i
+  return target_index
+
+def split_moves_according_to_length(strategy):
   output = [[],[],[],[],[],[],[]]
   for move in strategy:
     output[len(move)].append(move)
   return output
 
-def cal_move_length_in_strategy(strategy):
+def cal_move_length_in_strategy(strategy): #modify name,FIXME
   board = [0,0,0,0,0,0]
   for move in strategy:
     board[len(move)] += 1
@@ -114,6 +131,13 @@ def func_strategy_compare(l, r):
     return GREATER
   
   compare_two(l,r)
+
+def select_all_length_n_moves(strategy, n):
+  output  = []
+  for move in strategy:
+    if len(move) == n:
+      output.append(move)
+  return output
 
 def sort_strategy(strategy):
   strategy = sorted(strategy, key = cmp_to_key(strategy_compare))
@@ -258,7 +282,7 @@ def transform_out(cards):
 def cal_box_value(box):
   return -len(box) #FIXME
 
-def sort_box_by_length(box):
+def sort_box(box):
   return sorted(box, key=len)
 
 def transform_box_number_to_box_character(box):
@@ -505,6 +529,60 @@ def calculate_value(times, win):
     value += times
   return value
 
+
+def choose_from_one_strategy_new(strategy, other_hands, players, myPlayerId):
+  sg = sort_strategy(strategy)
+  move_count = len(sg)
+
+  splits = split_moves_according_to_length(sg)
+
+  
+  moveLengths = cal_move_length_in_strategy(sg)
+  
+  move_count = len(sg)
+
+  npc = NewNPC()
+
+  #strategy1: if i have a five and two single, if the bigger single is not big enough
+  #play the five, else play the small single
+  if moveLengths[5] == 1:
+    if moveLengths[1] == 2 and  move_count ==3:
+      re = compare_one(splits[1][-1], [other_hands[-1]])
+      if re == GREATER:
+        return splits[1][0]
+      else:
+        return splits[5][0]
+    elif moveLengths[1] == 1 and move_count ==2:
+      re = compare_one(splits[1][-1], [other_hands[-1]])
+      if re == GREATER:
+        return splits[1][0]
+      else:
+        return splits[5][0]
+
+  #only singles and pairs, decide which to play
+  if moveLengths[3] == 0 and moveLengths[5] == 0 and moveLengths[1]>0 and moveLengths[2]>0:
+    d = splits[1][-1][0] - other_hands[-1]
+    if d > 0:
+      return splits[1][0]
+    d2 = get_rank(splits[2][-1][1])
+    two_groups = npc.cal_two_cards(other_hands)
+    if len(two_groups) == 0:
+      return splits[2][-1]
+    else:
+      if compare_two(splits[2][-1], two_groups[-1]) == GREATER:
+        return splits[2][0]
+      elif get_rank(two_groups[-1][0]) - get_rank(splits[2][-1][0]) <= 2:
+        return splits[2][0]
+    return splits[1][0]
+
+
+  choice = random.randint(0, move_count-1)
+  #return sg[choice]
+  index = get_longest_move_index(sg)
+  return sg[index]
+
+  
+ 
 def choose_from_one_strategy(strategy , other_hands, players, myPlayerId):
   #consider simulate here
   sg2 = sort_strategy(strategy)
@@ -564,6 +642,8 @@ def choose_from_one_strategy(strategy , other_hands, players, myPlayerId):
             candidates.append(g2[0])
           else:
             pass
+
+  # to gurantee at least one candidate
   for i in range(len(sg2)-1,-1,-1):
     if len(sg2[i]) != 4:
       candidates.append(sg2[i])
@@ -1043,10 +1123,7 @@ class Algorithm:
         toBeat = transform_in(state.toBeat.cards)
       lenToBeat = len(toBeat)
 
-      print(f"ALV2.9_id:{state.myPlayerNum}\n")
-      print(f"p0:{state.players[0].handSize},p1:{state.players[1].handSize},p2:{state.players[2].handSize},p3:{state.players[3].handSize}\n")
-      print(f"MyHands:{transform_out(sorted(myHandCards))}\n")
-      print(f"toBeat:{transform_out(toBeat)}\n")
+
 
       action = []             # The cards you are playing for this trick
       myData = state.myData   # Communications from the previous iteration
@@ -1080,6 +1157,14 @@ class Algorithm:
       for i in range(52):
         if card_state[i] == IN_OTHER_HAND:
           other_hands.append(i)
+
+
+
+      print(f"{VERSION}_id:{state.myPlayerNum}\n")
+      print(f"p0:{state.players[0].handSize},p1:{state.players[1].handSize},p2:{state.players[2].handSize},p3:{state.players[3].handSize}\n")
+      print(f"MyHands:{transform_out(sorted(myHandCards))}\n")
+      print(f"toBeat:{transform_out(toBeat)}\n")
+      print(f"OtherHands:{transform_out(other_hands)}\n")
       
       #current
       #table = Table() #time consuming 
@@ -1196,24 +1281,38 @@ class NewNPC:
       l4 = len(splits[4])
       l1 = len(splits[1])
       l5 = len(splits[5])
-      for i in range(min(l1,l4)):
-        box[i].append(sorted(splits[1]+splits[4]))
+
+      for j in range(min(l1,l4)):
+        box[i].append(sorted(splits[1][j]+splits[4][j]))
       if l1 > l4:
-        for i in range(l4,l1):
-          box[i].append(splits[1])
+        for j in range(l4,l1):
+          box[i].append(splits[1][j])
       elif l4 > l1:
-        for i in range(l1,l4):
-          box[i].append(splits[4])
-      for i in range(min(l2,l3)):
-        box[i].append(sorted(splits[2]+splits[3]))
+        for j in range(l1,l4):
+          box[i].append(splits[4][j])
+
+
+      for t in splits[5]:
+        box[i].append(t)
+
+
+      #without merge 2,3 
+      exist_3_2_merge = min(l2,l3) > 0
+      if exist_3_2_merge == True:
+        mid = sorted(mid)
+        box.append(mid)
+
+      
+      for j in range(min(l2,l3)):
+        box[i].append(sorted(splits[2][j]+splits[3][j]))
       if l3 > l2:
-        for i in range(l2, l3):
-          box[i].append(splits[3])
+        for j in range(l2, l3):
+          box[i].append(splits[3][j])
       if l3 < l2:
-        for i in range(l3,l2):
-          box[i].append(splits[2])
-      for i in l5:
-        box[i].append(splits[5])
+        for j in range(l3,l2):
+          box[i].append(splits[2][j])
+
+      
       box[i] = sort_strategy(box[i])
     return 
   
@@ -1222,27 +1321,11 @@ class NewNPC:
     current = []
     self.deep_search5(handCards,current, box)
 
-    #box = sorted(box,key=len)
-
     #merge 3+2, 4+1 composites
-    #self.merge_moves_in_each_strategy(box)
+    self.merge_moves_in_each_strategy(box)
 
     box = sorted(box,key=len)
-
-    #merge 4 and 1
-    # q_4 = []
-    # q_1 = []
-    # for strategy in box:
-    #   new_strategy = []
-    #   for s in strategy:
-    #     if len(s) == 1:
-    #       q_1.append(s)
-    #     elif len(s) == 4:
-    #       q_4.append(s)
-    #     else:
-    #       new_strategy.append(s) 
-    #   for i in range(min(len(q_4),len(q_1))):
-    #     q_4[i] = q_1[i]
+    #sort_box(box)
 
     return box
     
@@ -1420,13 +1503,11 @@ class NewNPC:
                   return transform_out(s+g),myData
             return transform_out(s), myData
     
-    rl =  20
+    iter_num = min(len(box), BOX_USE_LENGTH)
     if lenToBeat == 0:
-      use_number = 10
-      use_number = min(use_number, len(box))
       ind = -1
       max = -1000
-      for i in range(use_number):
+      for i in range(iter_num):
         n4 = strategy_of_length_n_number(box[i],4)
         if n4 * 4 >= len(myHandCards):
           continue
@@ -1437,67 +1518,47 @@ class NewNPC:
           ind = i
 
       if ind != -1:
-        chosen = choose_from_one_strategy(box[ind], otherHands, players, myPlayerNum)
+        chosen = choose_from_one_strategy_new(box[ind], otherHands, players, myPlayerNum)
         return transform_out(chosen), myData
       else:
         print("dont know how to play")
         raise Exception("don't know how to play")
     elif lenToBeat == 1:
-      for i in range(min(rl,len(box))):
+      for i in range(iter_num):
         strategy = box[i]
-        num_1 = strategy_of_length_n_number(strategy,1)
-        for s in strategy:
-          if len(s) == 1:
-            if GREATER ==  compare_one(s,toBeat):
-              if simulate == False and num_1 == 1 and len(otherHands) > 0:
-                fold = self.whether_fold_one(s[0], minNumCardinOtherHand, otherHands)
-                if fold == True:
-                  return [], myData
-              return transform_out(s),myData
+        toPlay, moveType = self.one_card_response_strategy(strategy, toBeat, otherHands, minNumCardinOtherHand, simulate)
+        if moveType == PLAY_CARD and len(toPlay) != 0:
+          print(f"max_iter_num:{i}\n")
+          return transform_out(toPlay), myData
+        elif moveType == FOLDER:
+          return [],myData
+        else:
+          pass
     elif lenToBeat == 2:
-      for i in range(min(rl,len(box))):
+      for i in range(iter_num):
         strategy = box[i]
         for s in strategy:
           if len(s) == 2 and GREATER ==  compare_two(s,toBeat):
             return transform_out(s),myData
     elif lenToBeat ==3:
-      for i in range(min(rl,len(box))):
+      for i in range(iter_num):
         strategy = box[i]
         for s in strategy:
           if len(s) == 3 and GREATER ==  compare_three(s,toBeat):
             return transform_out(s),myData       
     elif lenToBeat == 5:
-      card_type = card5_type(toBeat)
-      for i in range(min(rl,len(box))):
+      for i in range(iter_num):
         strategy = box[i]
         for s in strategy:
           if len(s) == 5:
             if GREATER == compare_five(s, toBeat):
               compare_five(s, toBeat)
-              return transform_out(s),myData
-      #for full house
-      for i in range(min(rl,len(box))):
-        strategy = box[i]
-        for s in strategy:
-          if len(s) == 3: #for full house
-            for s1 in strategy:
-              if len(s1) == 2:
-                mid = sorted(s + s1)
-                if GREATER == compare_five(mid, toBeat):
-                  return transform_out(mid), myData
-      for i in range(min(rl,len(box))):
-        strategy = box[i]
-        for s in strategy:
-          if len(s) == 4: #for 4 in a kind
-            for s1 in strategy:
-              if len(s1) == 1:
-                mid = sorted(s + s1)
-                if GREATER == compare_five(mid, toBeat):
-                  return transform_out(mid), myData               
+              return transform_out(s),myData           
     else:
       print("Can't beat!\n")
       #raise Exception('lenToBeat:%d!\n',lenToBeat)
     
+    print("NoSolution!\n")
     return [],myData
   
   def whether_fold_one(self,one_card, minNumCardinOtherHand, otherHands):
@@ -1506,3 +1567,47 @@ class NewNPC:
     if p_max - one_card > 0 and (p_max - one_card) < 4 and minNumCardinOtherHand > 2 :
       return True
     return False 
+  
+  def one_card_response_strategy(self, strategy, toBeat, otherHands, minNumCardinOtherHand, simulate):
+    num_1 = strategy_of_length_n_number(strategy,1)
+    if num_1 == 0:
+      return [], NOBEAT
+    
+    moves = select_all_length_n_moves(strategy, 1)
+    card = moves[-1][0]
+    if card <= toBeat[0]:
+      return [], NOBEAT
+    
+    if num_1 == 1:
+      for s in strategy:
+        if len(s) == 1:
+          if GREATER ==  compare_one(s,toBeat):
+            if simulate == False and len(otherHands) > 0:
+              fold = self.whether_fold_one(s[0], minNumCardinOtherHand, otherHands)
+              if fold == True:
+                return [], FOLDER
+            
+          
+
+
+    if simulate == False and len(otherHands) > 0:
+      diff = card - otherHands[-1]
+      if diff > 0:
+        if num_1 == 1 or moves[-2][0] < toBeat[0]:
+          if minNumCardinOtherHand >= 2:
+            mid_cards = []
+            for i in range(toBeat[0] +1, card):
+              mid_cards.append(i)
+            for mid in mid_cards:
+              if mid in otherHands:
+                print("folder!\n")
+                return [],FOLDER
+      else:
+        if diff >=(-4) and minNumCardinOtherHand >= 2 and (num_1 == 1 or moves[-2][0] < toBeat[0]):
+          print("folder2!\n")
+          return [],FOLDER
+          
+    for move in moves:
+      if move[0] > toBeat[0]:
+        return move, PLAY_CARD
+    return [], NOBEAT
