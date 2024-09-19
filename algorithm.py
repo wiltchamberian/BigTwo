@@ -1,16 +1,37 @@
 from classes import *
 
-VERSION = "2.17_4"
+VERSION = "2.17_7_probability"
 
 import copy
 from functools import cmp_to_key
 #####################helper#########################
 import random 
 
+
+
+STRATEGY_TYPE_LEN = 0
+STRATEGY_TYPE_PROBABILITY = 1
+
+
+#strategy1
+STRATEGY_TYPE = STRATEGY_TYPE_PROBABILITY
+MAX_FOLDER_TIME_IN_A_GAME = 2
+MIN_NUM_CARD_IN_OTHER_HAND_FOR_FOLDER = 2
+
+#strategy2
+# STRATEGY_TYPE = STRATEGY_TYPE_LEN
+# MAX_FOLDER_TIME_IN_A_GAME = 2
+# MIN_NUM_CARD_IN_OTHER_HAND_FOR_FOLDER = 2
+
+#strategy3
+
+
+
 #play_type
 FOLDER = 0
 NOBEAT = 1
 PLAY_CARD = 2
+
 
 
 BOX_USE_LENGTH = 10
@@ -47,6 +68,18 @@ FULL_HOUSE = 2
 FOUR_OF_A_KIND = 3 
 STRAIGHT_FLUSH = 4 
 
+PROB_STRAIGTH = 0.00392465
+PROB_FLUSH = 0.0019654
+PROB_FULL_HOUSE = 0.00144058
+PROB_FOUR_OF_A_KIND = 0.000240096
+PROB_STRAIGHT_FLUSH = 0.0000138517
+
+PROB_NB_STRAIGHT_FLUSH = (1.0- PROB_STRAIGHT_FLUSH)
+PROB_NB_FOUR_OF_A_KIND = PROB_NB_STRAIGHT_FLUSH * (1.0-PROB_FOUR_OF_A_KIND)
+PROB_NB_FULL_HOUSE = PROB_NB_FOUR_OF_A_KIND * (1.0 - PROB_FULL_HOUSE)
+PROB_NB_FLUSH  = PROB_NB_FULL_HOUSE * (1.0 - PROB_FLUSH)
+PROB_NB_STRAIGHT = PROB_NB_FLUSH * (1.0 - PROB_STRAIGTH)
+
 NPC0_WIN = 0
 NPC1_WIN = 1
 
@@ -54,6 +87,8 @@ NPC_LOOP = 5
 SAMPLE_LOOP = 10
 MCTS_LOOP = 10 
 TREE_SEARCH = 10
+
+
 
 ranks = ['3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A', '2']
 suits = ['D', 'C', 'H', 'S']
@@ -74,7 +109,7 @@ def get_longest_move_index(strategy):
   return target_index
 
 def split_moves_according_to_length(strategy):
-  output = [[],[],[],[],[],[],[]]
+  output = [[],[],[],[],[],[]]
   for move in strategy:
     output[len(move)].append(move)
   return output
@@ -581,85 +616,6 @@ def choose_from_one_strategy_new(strategy, other_hands, players, myPlayerId):
   index = get_longest_move_index(sg)
   return sg[index]
 
-  
- 
-def choose_from_one_strategy(strategy , other_hands, players, myPlayerId):
-  #consider simulate here
-  sg2 = sort_strategy(strategy)
-  
-  g1 = []
-  g2 =[]
-  g3= []
-  g4 =[]
-  g5=[]
-  for move in sg2:
-    if len(move)==1:
-      g1.append(move)
-    elif len(move)==2:
-      g2.append(move)
-    elif len(move)==3:
-      g3.append(move)
-    elif len(move)==4:
-      g4.append(move)
-    elif len(move)==5:
-      g5.append(move)
-  
-  number_of_one_card_in_four_kind = 0
-  number_of_two_cards_in_full_house = 0
-
-  candidates = []
-  if len(g1) > 0:
-    card = g1[-1]
-    if other_hands != None and len(other_hands) > 0: 
-      re = compare_one(card, [other_hands[-1]])
-      if re == GREATER:
-        if len(g4) == 0:
-          if len(g1) == 1:
-            return g1[-1]
-          else: 
-            return g1[0]
-        else:
-          mid = g1[0] + g4[0]
-          number_of_one_card_in_four_kind += 1
-          candidates.append(mid)
-      else:
-        if len(g4) > 0:
-          candidates.append(g1[0] + g4[0])
-          number_of_one_card_in_four_kind += 1
-
-  npc = NewNPC()
-  if len(g2) > 0:
-    if len(g3) > 0:
-      candidates.append(g2[0] + g3[0])
-      number_of_two_cards_in_full_house += 1
-    else:
-      if other_hands != None and len(other_hands)>0: 
-        two_groups = npc.cal_two_cards(other_hands)
-        if (len(two_groups)==0):
-          candidates.append(g2[0])
-        else:
-          if compare_two(g2[-1], two_groups[-1]) == GREATER:
-            candidates.append(g2[0])
-          else:
-            pass
-
-  # to gurantee at least one candidate
-  for i in range(len(sg2)-1,-1,-1):
-    if len(sg2[i]) != 4:
-      candidates.append(sg2[i])
-      break
-
-  if len(g1)-number_of_one_card_in_four_kind >= 2:
-    return g1[number_of_one_card_in_four_kind]
-  elif len(g2) - number_of_two_cards_in_full_house >= 2:
-    return g2[number_of_two_cards_in_full_house]
-
-  if len(candidates) == 0:
-    print("candidate_number_zero!\n")
-    return []
-  
-  choice = random.randint(0, len(candidates)-1)
-  return candidates[choice]
 
 
 class Table:
@@ -1112,8 +1068,13 @@ class NPC:
 ###################algorithm##################
 
 class Algorithm:
-    
+
+    def __init__(self):
+      pass
+
     def getAction(self, state: MatchState):
+      newNpc = NewNPC()
+
       myHandCards = transform_in(state.myHand)
 
       toBeat = []
@@ -1146,6 +1107,15 @@ class Algorithm:
         first_round_first_play = True
         print("first_round_first_play\n")
 
+      #new game start
+      if len(myData) == 0:
+        newNpc.current_folder_time = 0
+      else:
+        newNpc.current_folder_time = int(myData)
+      if len(rounds) == 0 or (len(rounds)==1 and len(rounds[0])<=3):
+        print("New Game Start?\n")
+        newNpc.current_folder_time = 0
+      print(f"Folder_Time:{newNpc.current_folder_time}\n")
 
       #formulate the state:
       card_state = [IN_OTHER_HAND] * 52
@@ -1160,11 +1130,12 @@ class Algorithm:
 
 
 
-      print(f"{VERSION}_id:{state.myPlayerNum}\n")
-      print(f"p0:{state.players[0].handSize},p1:{state.players[1].handSize},p2:{state.players[2].handSize},p3:{state.players[3].handSize}\n")
-      print(f"MyHands:{transform_out(sorted(myHandCards))}\n")
-      print(f"toBeat:{transform_out(toBeat)}\n")
-      print(f"OtherHands:{transform_out(other_hands)}\n")
+      print(f"{VERSION}_id\n")
+      print(f"myPlayerNum = {state.myPlayerNum}\n")
+      print(f"myHands = {transform_out(sorted(myHandCards))}\n")
+      print(f"toBeat = {transform_out(toBeat)}\n")
+      print(f"otherHands = {transform_out(other_hands)}\n")
+      print(f"handSize = {[state.players[0].handSize,state.players[1].handSize,state.players[2].handSize,state.players[3].handSize]}\n")
       
       #current
       #table = Table() #time consuming 
@@ -1175,7 +1146,6 @@ class Algorithm:
         card_state0[card] = IN_MY_HAND
       
 
-      
       other_cards = get_other_cards(card_state)
       card_number = len(other_cards)
       if card_number > 13:
@@ -1193,8 +1163,8 @@ class Algorithm:
       ind = 0
       npc = NPC(card_state0, table)
 
-      npc = NewNPC()
-      return npc.play_card(myHandCards, other_hands, toBeat, state.myPlayerNum, state.players, myData, first_round_first_play, simulate = False)
+   
+      return newNpc.play_card(myHandCards, other_hands, toBeat, state.myPlayerNum, state.players, myData, first_round_first_play, simulate = False)
       
       #if comes here, just pass
       return [], myData
@@ -1269,6 +1239,7 @@ class Algorithm:
 
 class NewNPC: 
   def __init__(self):
+    self.current_folder_time = 0
     pass 
   
   def merge_moves_in_each_strategy(self, box):
@@ -1315,17 +1286,202 @@ class NewNPC:
       
       box[i] = sort_strategy(box[i])
     return 
+
+  #myPair, the pair in my hand, like [6D,6H]
+  #handGroup, like [[3D,3H,3S],[6C,6S],[9D,9C,9H,9S]]
+  #leftOvers, cards number in each hand: [3,4,5]
+  def probability_of_bigger_pair_not_exist(self, myPair, otherHandGroup, LeftOvers):
+    leftOvers = copy.deepcopy(LeftOvers)
+    leftOverLen = len(leftOvers)
+    start = 0
+    for i in range(len(otherHandGroup)):
+      if otherHandGroup[i][-1] >= myPair[-1]:
+        start = i
+        break
+    p = 1.0
+    for i in range(start+1, len(otherHandGroup)):
+      if len(otherHandGroup[i]) == 4:
+        return 0.0
+      
+    numbers_of_zero_in_leftOvers = 0
+    for i in range(start+1, len(otherHandGroup)):
+      if len(otherHandGroup[i])==3:
+        if leftOvers[0] == 0 or leftOvers[1] == 0 or leftOvers[2] == 0:
+          if(leftOvers[0]==0 and leftOvers[1]==0 and leftOvers[2]==0):
+            return p
+          else:
+            return 0.0
+        length = leftOvers[0]+leftOvers[1]+leftOvers[2]
+        p_not_together = float(leftOvers[0]*leftOvers[1]*leftOvers[2]) * 6/float(length*(length-1)*(length-2))
+        p = p * p_not_together
+        leftOvers[0]-=1
+        leftOvers[1]-=1
+        leftOvers[2]-=1
+    
+    for i in range(start+1, len(otherHandGroup)):
+      if len(otherHandGroup[i]) == 2:
+        length = leftOvers[0]+leftOvers[1]+leftOvers[2]
+        p_not_together = float(leftOvers[0]*leftOvers[1] + leftOvers[0]*leftOvers[2] +leftOvers[1]*leftOvers[2]) * 2/float(length * (length-1))
+        p = p * p_not_together
+        #here is an approximate
+    
+    if(len(otherHandGroup[start])==2):
+      if otherHandGroup[start][-1] < myPair[-1]:
+        pass 
+      else:
+        p = p * float(LeftOvers[0]*LeftOvers[1] + LeftOvers[0]*LeftOvers[2] +LeftOvers[1]*LeftOvers[2]) * 2/float(leftOverLen * (leftOverLen-1))
+
+    return p
   
-  def cal_good_composites(self, handCards):
+  
+  def probability_of_bigger_three_not_exist(self, myThree, otherHandGroup, leftOvers):
+    p = 1.0
+    start = 0
+    #this is jus an approximate calculation
+    for i in range(0, len(otherHandGroup)):
+      if otherHandGroup[i][-1] > myThree[-1]:
+        start = i
+        break
+    
+    length = leftOvers[0]+leftOvers[1]+leftOvers[2]
+    for i in range(start, len(otherHandGroup)):
+      if len(otherHandGroup[i])==3:
+        p_together=  0.0
+        if leftOvers[0]>=3:
+          p_together += float(leftOvers[0]*(leftOvers[0]-1)*(leftOvers[0]-2)/6)
+        if leftOvers[1]>=3:
+          p_together += float(leftOvers[1]*(leftOvers[1]-1)*(leftOvers[1]-2)/6)
+        if leftOvers[2]>=3:
+          p_together += float(leftOvers[2]*(leftOvers[2]-1)*(leftOvers[2]-2)/6)
+        
+        p_together = p_together/float(length*(length-1)*(length-2)/6)
+        p_not_together = 1.0 - p_together
+        p = p * p_not_together
+      elif len(otherHandGroup[i]) == 4:
+        p_4_in_one = 0.0
+        denomitor = float(length * (length-1)*(length-2)*(length-3))/24
+        if(leftOvers[0]>=4):
+          p_4_in_one += float(leftOvers[0]*(leftOvers[0]-1)*(leftOvers[0]-2)*(leftOvers[0]-3))/24/denomitor
+        if(leftOvers[1]>=4):
+          p_4_in_one += float(leftOvers[1]*(leftOvers[1]-1)*(leftOvers[1]-2)*(leftOvers[1]-3))/24/denomitor
+        if(leftOvers[1]>=4):
+          p_4_in_one += float(leftOvers[2]*(leftOvers[2]-1)*(leftOvers[2]-2)*(leftOvers[2]-3))/24/denomitor
+        p_3_in_one = 0.0
+        if(leftOvers[0]>=3):
+          p_3_in_one += float(leftOvers[0]*(leftOvers[0]-1)*leftOvers[0]-2)/6 * leftOvers[1] * leftOvers[2]/denomitor
+        if(leftOvers[1]>=3):
+          p_3_in_one += float(leftOvers[1]*(leftOvers[1]-1)*leftOvers[1]-2)/6 * leftOvers[0] * leftOvers[2]/denomitor
+        if(leftOvers[2]>=3):
+          p_3_in_one += float(leftOvers[2]*(leftOvers[2]-1)*leftOvers[2]-2)/6 * leftOvers[0] * leftOvers[1]/denomitor
+        p_not_together=  1.0 - (p_4_in_one + p_3_in_one)
+        p = p * p_not_together
+
+    return p
+
+  def probability_of_bigger_five_not_exist(self, myFive, otherHandGroup, leftOvers):
+    if leftOvers[0]<5 and leftOvers[1]<5 and leftOvers[2]<5:
+      return 1.0
+    #a very rough approximate formula
+    tp = card5_type(myFive)
+    if tp == STRAIGHT:
+      return PROB_NB_STRAIGHT
+    elif tp == FLUSH:
+      return PROB_NB_FLUSH
+    elif tp == FULL_HOUSE:
+      return PROB_NB_FULL_HOUSE
+    elif tp == FOUR_OF_A_KIND:
+      return PROB_NB_FOUR_OF_A_KIND
+    elif tp == STRAIGHT_FLUSH:
+      return PROB_NB_STRAIGHT_FLUSH
+
+    return 1.0
+    
+  def probability_of_bigger_one_not_exist(self, myOne, otherHands, leftOvers):
+    return 1.0
+
+  def cal_strategy_value(self, strategy, otherHands, otherHandsGroup, otherHandNumbers):
+    splits = split_moves_according_to_length(strategy)
+    #calculate value of each split
+    #the value of this strategy is the product of the probability of no beat
+
+    p = 1.0
+    #calculate 1-card move values:
+    #lowest,[otherhands],highest,[otherhands]
+    other_len = len(otherHands)
+    if len(splits[1])> 0:
+      l = len(splits[1])
+      ind = -1
+      #a simple formula to count the probablity of play all single cards
+      while l > 0 and (-ind)<=other_len:
+        myMax = splits[1][ind][0]
+        if myMax < otherHands[ind]:
+          p *= float(myMax)/float(otherHands[ind])
+        l-=2
+        ind -= 1
+    if len(splits[2])> 0:
+      l = len(splits[2])
+      ind = -1
+      while l > 0:
+        p *= self.probability_of_bigger_pair_not_exist(splits[2][ind],otherHandsGroup,otherHandNumbers )
+        ind -= 1
+        l -= 2
+    if len(splits[3])> 0:
+      l = len(splits[3])
+      ind = -1
+      while l > 0:
+        p *= self.probability_of_bigger_three_not_exist(splits[3][ind], otherHandsGroup, otherHandNumbers)
+        ind -= 1
+        l -= 2
+    if len(splits[5])>0:
+      l = len(splits[5])
+      ind = -1
+      while l > 0:
+        p *= self.probability_of_bigger_five_not_exist(splits[5][ind], otherHandsGroup, otherHandNumbers)
+        ind -= 1
+        l -= 2
+
+    return p
+
+
+  def sort_box_by_value(self, box_with_value, reverse = False):
+    box_with_value = sorted(box_with_value, key = lambda x:x[1], reverse = reverse)
+
+    return box_with_value
+
+  def cal_good_composites(self, handCards, otherHands, otherHandNumbers):
     box = []
     current = []
+
+    otherHandsGroup = make_hand_group(otherHands)
     self.deep_search5(handCards,current, box)
 
     #merge 3+2, 4+1 composites
     self.merge_moves_in_each_strategy(box)
 
-    box = sorted(box,key=len)
-    #sort_box(box)
+    if STRATEGY_TYPE == STRATEGY_TYPE_LEN:
+      for i in range(len(box)):
+        box[i] = (box[i], len(box[i]))
+      box = self.sort_box_by_value(box)
+    elif STRATEGY_TYPE == STRATEGY_TYPE_PROBABILITY:
+      for i in range(len(box)):
+        value = self.cal_strategy_value(box[i], otherHands, otherHandsGroup, otherHandNumbers)
+        box[i] = (box[i], value)
+      box = self.sort_box_by_value(box, reverse = True)
+
+    # TEST
+    # box2 = []
+    # for i in range(len(box)):
+    #   box2.append([box[i], len(box[i])])
+    # box2 = self.sort_box_by_value(box2)
+    # for i in range(len(box2)):
+    #   box2[i] = box2[i][0]
+
+
+
+    #TEST
+    # box3 = []
+    # for i in range(len(box)):
+    #   box3.append(box[i][0])
 
     return box
     
@@ -1407,15 +1563,19 @@ class NewNPC:
       output.append([card])
     return output
 
+  #calculate all possible two-cards play
   def cal_two_cards(self, handCards):
-    output = []
     handGroup = make_hand_group(handCards)
+    return self.cal_two_cards_by_hand_group(handGroup)
+
+  def cal_two_cards_by_hand_group(self, handGroup):
+    output = []
     for group in handGroup:
       for i in range(len(group)-1):
         for j in range(i+1, len(group)):
           output.append([group[i],group[j]])
-    return output
-
+    return output    
+  
   def cal_three_cards(self, handCards):
     output = []
     handGroup = make_hand_group(handCards)
@@ -1425,6 +1585,15 @@ class NewNPC:
           for k in range(j+1, len(group)):
             output.append([group[i],group[j],group[k]])
     return output
+  
+  def cal_three_cards_by_hand_group(self,handGroup):
+    output = []
+    for group in handGroup:
+      for i in range(len(group)-2):
+        for j in range(i+1, len(group)-1):
+          for k in range(j+1, len(group)):
+            output.append([group[i],group[j],group[k]])
+    return output    
 
   def cal_four_cards(self, handCards):
     output = []
@@ -1477,8 +1646,17 @@ class NewNPC:
           output.append(flushGroup[i][j:j+5])
     return output
   
+  def cal_otherHands_numbers(self, myPlayerNum, players):
+    output = []
+    for i in range(len(players)):
+      if i!= myPlayerNum:
+        output.append(players[i].handSize)
+    return output
+
   def play_card(self, myHandCards, otherHands, toBeat, myPlayerNum, players = [], myData = "", first_round_first_play = False, simulate = False):  
     lenToBeat = len(toBeat) 
+
+    otherHandsNumbers = self.cal_otherHands_numbers(myPlayerNum, players)
 
     minNumCardinOtherHand = 13
     if simulate == False:
@@ -1486,80 +1664,65 @@ class NewNPC:
         if i!= myPlayerNum:
           minNumCardinOtherHand = min(minNumCardinOtherHand, players[i].handSize)
 
-    box = self.cal_good_composites(myHandCards)
+    box = self.cal_good_composites(myHandCards, otherHands, otherHandsNumbers)
 
     if first_round_first_play:
       for i in range(len(box)):
-        strategy = box[i]
+        strategy = box[i][0]
         for s in strategy:
           if CARD_3D in s:
             if len(s) == 5:
               print("card_3d1\n")
-              return transform_out(s), myData
+              return transform_out(s), str(self.current_folder_time)
             else:
               for g in strategy:
                 if len(g) == (5-len(s)):
                   print("card_3d2\n")
-                  return transform_out(s+g),myData
-            return transform_out(s), myData
+                  return transform_out(s+g),str(self.current_folder_time)
+            return transform_out(s), str(self.current_folder_time)
     
     iter_num = min(len(box), BOX_USE_LENGTH)
     if lenToBeat == 0:
-      ind = -1
-      max = -1000
-      for i in range(iter_num):
-        n4 = strategy_of_length_n_number(box[i],4)
-        if n4 * 4 >= len(myHandCards):
-          continue
+      chosen = choose_from_one_strategy_new(box[0][0], otherHands, players, myPlayerNum)
+      return transform_out(chosen), str(self.current_folder_time)
 
-        value = cal_box_value(box[i])
-        if max < value:
-          max= value 
-          ind = i
-
-      if ind != -1:
-        chosen = choose_from_one_strategy_new(box[ind], otherHands, players, myPlayerNum)
-        return transform_out(chosen), myData
-      else:
-        print("dont know how to play")
-        raise Exception("don't know how to play")
     elif lenToBeat == 1:
       for i in range(iter_num):
-        strategy = box[i]
+        strategy = box[i][0]
         toPlay, moveType = self.one_card_response_strategy(strategy, toBeat, otherHands, minNumCardinOtherHand, simulate)
         if moveType == PLAY_CARD and len(toPlay) != 0:
           print(f"max_iter_num:{i}\n")
-          return transform_out(toPlay), myData
+          return transform_out(toPlay), str(self.current_folder_time)
         elif moveType == FOLDER:
-          return [],myData
+          return [], str(self.current_folder_time)
         else:
           pass
     elif lenToBeat == 2:
       for i in range(iter_num):
-        strategy = box[i]
+        strategy = box[i][0]
         for s in strategy:
           if len(s) == 2 and GREATER ==  compare_two(s,toBeat):
-            return transform_out(s),myData
+            return transform_out(s),str(self.current_folder_time)
     elif lenToBeat ==3:
       for i in range(iter_num):
-        strategy = box[i]
+        strategy = box[i][0]
         for s in strategy:
           if len(s) == 3 and GREATER ==  compare_three(s,toBeat):
-            return transform_out(s),myData       
+            return transform_out(s),str(self.current_folder_time)       
     elif lenToBeat == 5:
       for i in range(iter_num):
-        strategy = box[i]
+        strategy = box[i][0]
         for s in strategy:
           if len(s) == 5:
             if GREATER == compare_five(s, toBeat):
               compare_five(s, toBeat)
-              return transform_out(s),myData           
+              return transform_out(s),str(self.current_folder_time)           
     else:
       print("Can't beat!\n")
       #raise Exception('lenToBeat:%d!\n',lenToBeat)
     
     print("NoSolution!\n")
-    return [],myData
+    return [],str(self.current_folder_time)
   
   def whether_fold_one(self,one_card, minNumCardinOtherHand, otherHands):
     print("whether_fold_one!\n")
@@ -1585,27 +1748,31 @@ class NewNPC:
             if simulate == False and len(otherHands) > 0:
               fold = self.whether_fold_one(s[0], minNumCardinOtherHand, otherHands)
               if fold == True:
-                return [], FOLDER
-            
-          
-
+                if self.current_folder_time < MAX_FOLDER_TIME_IN_A_GAME:
+                 self.current_folder_time += 1
+                 print("folder!\n")
+                 return [], FOLDER
 
     if simulate == False and len(otherHands) > 0:
       diff = card - otherHands[-1]
       if diff > 0:
         if num_1 == 1 or moves[-2][0] < toBeat[0]:
-          if minNumCardinOtherHand >= 2:
+          if minNumCardinOtherHand >= MIN_NUM_CARD_IN_OTHER_HAND_FOR_FOLDER:
             mid_cards = []
             for i in range(toBeat[0] +1, card):
               mid_cards.append(i)
             for mid in mid_cards:
               if mid in otherHands:
-                print("folder!\n")
-                return [],FOLDER
+                if self.current_folder_time < MAX_FOLDER_TIME_IN_A_GAME:
+                  self.current_folder_time += 1
+                  print("folder!\n")
+                  return [],FOLDER
       else:
-        if diff >=(-4) and minNumCardinOtherHand >= 2 and (num_1 == 1 or moves[-2][0] < toBeat[0]):
-          print("folder2!\n")
-          return [],FOLDER
+        if diff >=(-4) and minNumCardinOtherHand >= MIN_NUM_CARD_IN_OTHER_HAND_FOR_FOLDER and (num_1 == 1 or moves[-2][0] < toBeat[0]):
+          if self.current_folder_time < MAX_FOLDER_TIME_IN_A_GAME:
+            self.current_folder_time += 1
+            print("folder2!\n")
+            return [],FOLDER
           
     for move in moves:
       if move[0] > toBeat[0]:

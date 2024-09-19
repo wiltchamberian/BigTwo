@@ -3,8 +3,36 @@
 from test import *
 from read_log import * 
 
+def init_players(handSize):
+  players = [Player()] * 4
+  for i in range(4):
+    players[i].handSize = handSize[i]
+  return players
+
+
 if __name__ == "__main__":
   npc = NewNPC()
+
+  myPlayerNum = 0
+  myHands = ['3C', '3S', '4S', '6S', '7H', '8D', '8H', '8S', '9C', 'TD', 'QS', '2S']
+  toBeat = ['7D']
+  otherHands = ['4D', '4C', '5D', '5C', '5H', '6D', '6H', '7C', '7S', '8C', '9D', '9H', '9S', 'TC', 'TH', 'TS', 'JD', 'JC', 'JH', 'JS', 'QD', 'QC', 'QH', 'KD', 'KC', 'KH', 'KS', 'AD', 'AC', 'AH', 'AS', '2D', '2C', '2H']
+  handSize = [12, 12, 11, 11]
+  players = init_players(handSize)
+  card,data = npc.play_card(transform_in(myHands), transform_in(otherHands), transform_in(toBeat), myPlayerNum, players)
+
+  myPlayerNum = 0
+  myHands = ['3S', '4H', '5D', '5C', '5S', '6H', '8C', 'TD', 'JD', 'JH', 'KC', 'KS', 'AC']
+  toBeat = ['3D']
+  otherHands = ['3C', '3H', '4D', '4C', '4S', '5H', '6D', '6C', '6S', '7D', '7C', '7H', '7S', '8D', '8H', '8S', '9D', '9C', '9H', '9S', 'TC', 'TH', 'TS', 'JC', 'JS', 'QD', 'QC', 'QH', 'QS', 'KD', 'KH', 'AD', 'AH', 'AS', '2D', '2C', '2H', '2S']
+  handSize = [13, 13, 13, 12]
+  players = init_players(handSize)
+  card,data = npc.play_card(transform_in(myHands), transform_in(otherHands), transform_in(toBeat), myPlayerNum, players)
+
+  s13 = ['4D', '5H', '7H', '8S', 'TH']
+  toBeat13 = ["JH"]
+  otherHands13 = ['3H', '3S', '4C', '4H', '4S', '5C', '5S', '6D', '6C', '6S', '7C', '8D', '8C', '8H', '9H', '9S', 'TD', 'TC', 'TS', 'JD', 'JS', 'QH', 'KS', 'AH']
+  card13,data = npc.play_card(transform_in(s13), transform_in(otherHands13), transform_in(toBeat13), 0, simulate = False)
 
   s12 = ['3C', '3S', '4H', '5H', '6D', '6S', '7H', '9S', 'TD', 'TH', 'JS', 'QS', '2D']
   toBeat12 =['7S']
