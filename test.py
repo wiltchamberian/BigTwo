@@ -1,5 +1,5 @@
 from algorithm import *
-
+from datetime import datetime
 
 def test1():
   al = Algorithm()
@@ -162,3 +162,59 @@ def npc_test(input):
   print(box)
   print(output)
   return output
+
+
+#this is a function for generating large composite of cards, and to make a lead play
+def generate_random():
+  var = []
+  for i in range(52):
+    var.append(i)
+
+  npc = NewNPC()
+
+  for i in range(5,13):
+    for j in range(0,20):
+      array = copy.deepcopy(var)
+      random.shuffle(array)
+      pokers = array[0:i]
+      pokers = sorted(pokers)
+      other_hands = array[i:(4*i)]
+      other_hands = sorted(other_hands)
+
+      out_pokers = transform_out(pokers)
+      print(f"hands:{out_pokers}\n")
+      card, data = npc.play_card(pokers, other_hands, [], 0)
+      print(f"play:{card}\n")
+
+
+def generate_random_file():
+    random.seed(43)
+
+    var = []
+    for i in range(52):
+        var.append(i)
+
+    npc = NewNPC()
+
+    # 获取当前时间，并格式化为字符串
+    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"output_{current_time}.txt"
+
+    with open(filename, 'w') as file:  # 打开文件以写入
+      for i in range(5, 13):
+        for j in range(0, 20):
+          array = copy.deepcopy(var)
+          random.shuffle(array)
+          pokers = array[0:i]
+          pokers = sorted(pokers)
+          other_hands = array[i:(4 * i)]
+          other_hands = sorted(other_hands)
+
+          out_pokers = transform_out(pokers)
+          file.write(f"hands: {out_pokers}\n")  
+
+          card, data = npc.play_card(pokers, other_hands, [], 0)
+          file.write(f"play: {card}\n") 
+
+  
+  

@@ -11,6 +11,10 @@ def init_players(handSize):
 
 
 if __name__ == "__main__":
+  generate_random_file()
+  
+  generate_random()
+
 
   npc = NewNPC()
 
