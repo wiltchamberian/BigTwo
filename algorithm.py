@@ -605,6 +605,7 @@ def choose_from_one_strategy_new(strategy, other_hands, players, myPlayerId):
         return splits[5][0]
 
   #only singles and pairs, decide which to play
+  #FIXME, if I have lots of pairs but only a small single, definitly I'll play pairs
   if moveLengths[3] == 0 and moveLengths[5] == 0 and moveLengths[1]>0 and moveLengths[2]>0:
     d = splits[1][-1][0] - other_hands[-1]
     if d > 0:

@@ -15,6 +15,15 @@ if __name__ == "__main__":
   npc = NewNPC()
 
   myPlayerNum = 0
+  myHands = ['4C', '4S', '8H', '8S', '9C', '9H', 'TS', 'JC', 'JH']
+  toBeat = []
+  otherHands = ['3C', '3S', '4D', '4H', '5D', '5C', '5H', '5S', '6H', '6S', '7C', '7H', '7S', '8D', '8C', '9S', 'TD', 'TH', 'QD', 'QH', 'QS', 'KD', 'AC', '2H', '2S']
+  handSize = [9, 12, 10, 3]
+  players = init_players(handSize)
+  card,data = npc.play_card(transform_in(myHands), transform_in(otherHands), transform_in(toBeat), myPlayerNum, players)
+
+
+  myPlayerNum = 0
   myHands = ['4H', '5H', '5S', '6C', '6H', '7C', '7H', '8S', 'TS', 'JD', 'JC', 'KD', '2H']
   toBeat = ['8C']
   otherHands = ['3C', '3H', '3S', '4D', '4C', '4S', '5D', '5C', '6D', '6S', '7D', '7S', '8D', '8H', '9D', '9C', '9H', '9S', 'TD', 'TC', 'TH', 'JH', 'JS', 'QD', 'QC', 'QH', 'QS', 'KC', 'KH', 'KS', 'AD', 'AC', 'AH', 'AS', '2D', '2C', '2S']
