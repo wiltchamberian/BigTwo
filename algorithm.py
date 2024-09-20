@@ -1,6 +1,6 @@
 from classes import *
 
-VERSION = "2.17_7_probability"
+VERSION = "2.17_8_len_sort"
 
 import copy
 from functools import cmp_to_key
@@ -14,14 +14,14 @@ STRATEGY_TYPE_PROBABILITY = 1
 
 
 #strategy1
-STRATEGY_TYPE = STRATEGY_TYPE_PROBABILITY
-MAX_FOLDER_TIME_IN_A_GAME = 2
-MIN_NUM_CARD_IN_OTHER_HAND_FOR_FOLDER = 2
-
-#strategy2
-# STRATEGY_TYPE = STRATEGY_TYPE_LEN
+# STRATEGY_TYPE = STRATEGY_TYPE_PROBABILITY
 # MAX_FOLDER_TIME_IN_A_GAME = 2
 # MIN_NUM_CARD_IN_OTHER_HAND_FOR_FOLDER = 2
+
+#strategy2
+STRATEGY_TYPE = STRATEGY_TYPE_LEN
+MAX_FOLDER_TIME_IN_A_GAME = 2
+MIN_NUM_CARD_IN_OTHER_HAND_FOR_FOLDER = 2
 
 #strategy3
 
@@ -34,7 +34,7 @@ PLAY_CARD = 2
 
 
 
-BOX_USE_LENGTH = 10
+BOX_USE_LENGTH = 20
 
 CARD_3D = 0
 
@@ -202,6 +202,10 @@ def compare_one(a1, a2):
     return EQUAL
   return EQUAL
 
+#return a number represent the value of a pair, so that we can compare two pairs for which is bigger by this value
+def cal_two_value(a):
+  return max(a[0],a[1])
+
 def compare_two(a1,a2):
   rank1 = get_rank(a1[0])
   suit1 = max(get_suit(a1[0]),get_suit(a1[1]))
@@ -218,6 +222,9 @@ def compare_two(a1,a2):
   else:
     return EQUAL   
   
+def cal_three_value(a):
+  return get_rank(a[-1])
+
 def compare_three(a1, a2):
   rank1 = get_rank(a1[0])
   rank2 = get_rank(a2[0])
@@ -228,6 +235,9 @@ def compare_three(a1, a2):
   else:
     return EQUAL
   
+def cal_four_value(a):
+  return get_rank(a[-1])
+
 def compare_four(a1, a2):
   rank1 = get_rank(a1)
   rank2 = get_rank(a2)
@@ -1460,7 +1470,7 @@ class NewNPC:
 
     if STRATEGY_TYPE == STRATEGY_TYPE_LEN:
       for i in range(len(box)):
-        box[i] = (box[i], len(box[i]))
+        box[i] = [box[i], len(box[i])]
       box = self.sort_box_by_value(box)
     elif STRATEGY_TYPE == STRATEGY_TYPE_PROBABILITY:
       for i in range(len(box)):
@@ -1653,7 +1663,57 @@ class NewNPC:
         output.append(players[i].handSize)
     return output
 
+  def sort_by_toBeat_one_value(self, box, toBeat, iter_num):
+    for i in range(iter_num):
+      for j in range(len(box[i][0]) - 1,-1, -1):
+        move = box[i][0][j]
+        if len(move) == 1:
+          re = compare_one(move, toBeat)
+          if re == GREATER:
+            box[i][-1] = move[0]
+            break
+          elif re == LESS:
+            box[i][-1] = -1
+            break
+
+    box[0:iter_num] = self.sort_box_by_value(box[0:iter_num])
+
+    return box
+  
+  def sort_by_toBeat_two_value(self, box, toBeat, iter_num):
+    for i in range(iter_num):
+      for j in range(len(box[i][0]) - 1,-1, -1):
+        move = box[i][0][j]
+        if len(move) == 2:
+          re = compare_two(move, toBeat)
+          if re == GREATER:
+            box[i][-1] = cal_two_value(move)
+            break
+          elif re == LESS:
+            box[i][-1] = -1
+            break
+
+    box[0:iter_num] = self.sort_box_by_value(box[0:iter_num])
+    return box
+
+  def sort_by_toBeat_three_value(self, box, toBeat, iter_num):
+    for i in range(iter_num):
+      for j in range(len(box[i][0]) - 1,-1, -1):
+        move = box[i][0][j]
+        if len(move) == 3:
+          re = compare_three(move, toBeat)
+          if re == GREATER:
+            box[i][-1] = cal_three_value(move)
+            break
+          elif re == LESS:
+            box[i][-1] = -1
+            break
+
+    box[0:iter_num] = self.sort_box_by_value(box[0:iter_num])
+    return box
+  
   def play_card(self, myHandCards, otherHands, toBeat, myPlayerNum, players = [], myData = "", first_round_first_play = False, simulate = False):  
+    
     lenToBeat = len(toBeat) 
 
     otherHandsNumbers = self.cal_otherHands_numbers(myPlayerNum, players)
@@ -1687,6 +1747,7 @@ class NewNPC:
       return transform_out(chosen), str(self.current_folder_time)
 
     elif lenToBeat == 1:
+      box =  self.sort_by_toBeat_one_value(box, toBeat, iter_num)
       for i in range(iter_num):
         strategy = box[i][0]
         toPlay, moveType = self.one_card_response_strategy(strategy, toBeat, otherHands, minNumCardinOtherHand, simulate)
@@ -1698,12 +1759,14 @@ class NewNPC:
         else:
           pass
     elif lenToBeat == 2:
+      box =  self.sort_by_toBeat_two_value(box, toBeat, iter_num)
       for i in range(iter_num):
         strategy = box[i][0]
         for s in strategy:
           if len(s) == 2 and GREATER ==  compare_two(s,toBeat):
             return transform_out(s),str(self.current_folder_time)
     elif lenToBeat ==3:
+      box =  self.sort_by_toBeat_three_value(box, toBeat, iter_num)
       for i in range(iter_num):
         strategy = box[i][0]
         for s in strategy:

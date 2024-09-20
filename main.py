@@ -11,6 +11,7 @@ def init_players(handSize):
 
 
 if __name__ == "__main__":
+
   npc = NewNPC()
 
   myPlayerNum = 0
