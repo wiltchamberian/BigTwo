@@ -216,5 +216,7 @@ def generate_random_file():
           card, data = npc.play_card(pokers, other_hands, [], 0)
           file.write(f"play: {card}\n") 
 
+          file.write(f"otherHands:{transform_out(other_hands)}\n\n")
+
   
   

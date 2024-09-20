@@ -11,6 +11,13 @@ def init_players(handSize):
 
 
 if __name__ == "__main__":
+
+  npc = NewNPC()
+  hands =  ['5C', '6D', '6C', '6S', '7D', '9C', 'QD', '2S']
+  otherHands = ['3D', '4D', '4H', '5D', '5H', '6H', '7C', '8D', '8H', '9D', '9H', '9S', 'TD', 'TC', 'TS', 'JD', 'JS', 'QC', 'KC', 'KH', 'AC', 'AH', 'AS', '2H']
+
+  card, data = npc.play_card(transform_in(hands), transform_in(otherHands), [], 0)
+
   generate_random_file()
   
   generate_random()
