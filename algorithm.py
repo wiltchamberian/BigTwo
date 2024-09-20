@@ -1,6 +1,6 @@
 from classes import *
 
-VERSION = "2.17_8_len_sort"
+VERSION = "2.17_8_len_sort_fix"
 
 import copy
 from functools import cmp_to_key
@@ -1664,6 +1664,7 @@ class NewNPC:
     return output
 
   def sort_by_toBeat_one_value(self, box, toBeat, iter_num):
+    
     for i in range(iter_num):
       for j in range(len(box[i][0]) - 1,-1, -1):
         move = box[i][0][j]
@@ -1676,7 +1677,7 @@ class NewNPC:
             box[i][-1] = -1
             break
 
-    box[0:iter_num] = self.sort_box_by_value(box[0:iter_num])
+    box[0:iter_num] = self.sort_box_by_value(box[0:iter_num], reverse = True)
 
     return box
   
@@ -1693,7 +1694,7 @@ class NewNPC:
             box[i][-1] = -1
             break
 
-    box[0:iter_num] = self.sort_box_by_value(box[0:iter_num])
+    box[0:iter_num] = self.sort_box_by_value(box[0:iter_num], reverse = True)
     return box
 
   def sort_by_toBeat_three_value(self, box, toBeat, iter_num):
@@ -1709,7 +1710,7 @@ class NewNPC:
             box[i][-1] = -1
             break
 
-    box[0:iter_num] = self.sort_box_by_value(box[0:iter_num])
+    box[0:iter_num] = self.sort_box_by_value(box[0:iter_num], reverse = True)
     return box
   
   def play_card(self, myHandCards, otherHands, toBeat, myPlayerNum, players = [], myData = "", first_round_first_play = False, simulate = False):  
