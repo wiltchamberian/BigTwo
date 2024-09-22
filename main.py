@@ -41,6 +41,15 @@ def play_card(hands, toBeat, otherHands, id, handSize, toBeatId = -1):
 if __name__ == "__main__":
 
   myPlayerNum = 1
+  toBeatId = 0
+  myHands = ['4H', '5S', '6D', '6C', '6S', '7C', '7H', '8C', '8H', '9C', 'TS', 'JD', 'KH']
+  myHandsColor = []
+  toBeat = ['KC']
+  otherHands = ['3C', '3H', '3S', '4D', '4C', '4S', '5D', '5C', '5H', '6H', '7D', '7S', '8D', '8S', '9D', '9H', '9S', 'TD', 'TC', 'TH', 'JC', 'JH', 'JS', 'QD', 'QC', 'QH', 'QS', 'KD', 'KS', 'AD', 'AC', 'AH', 'AS', '2D', '2C', '2H', '2S']
+  handSize = [12, 13, 13, 12]
+  cards, data = play_card(myHands,toBeat,otherHands,myPlayerNum,handSize)
+
+  myPlayerNum = 1
   myHands = ['9S', 'TH', 'TS', 'JC', 'JH']
   myHandsColor = []
   toBeat = []

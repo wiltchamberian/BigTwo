@@ -1,6 +1,6 @@
 from classes import *
 
-VERSION = "2.18.5_expectation_update"
+VERSION = "2.18.6_expectation_update_fix_bug"
 
 import copy
 from functools import cmp_to_key
@@ -2018,9 +2018,11 @@ class NewNPC:
         if moveType == PLAY_CARD and len(toPlay) != 0:
           print(f"max_iter_num:{i}\n")
           chosen = toPlay
+          break
         elif moveType == FOLDER:
           folder = True
           chosen = []
+          break
         else:
           pass
     elif lenToBeat == 2:
