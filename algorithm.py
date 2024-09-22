@@ -1,6 +1,6 @@
 from classes import *
 
-VERSION = "2.18_1_simple_expectation"
+VERSION = "2.18.2_expectation_update"
 
 import copy
 from functools import cmp_to_key
