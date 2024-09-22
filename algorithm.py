@@ -1,6 +1,6 @@
 from classes import *
 
-VERSION = "2.18.4_expectation_update"
+VERSION = "2.18.5_expectation_update"
 
 import copy
 from functools import cmp_to_key
@@ -2008,25 +2008,17 @@ class NewNPC:
     chosen = []
     folder = False
     if lenToBeat == 0:
-      start_2 = time.perf_counter()
       chosen = choose_from_one_strategy_new(box[0][0], otherHands, otherHandsNumbers, myPlayerNum)
-      end_2 = time.perf_counter()
-      print(f"time2:{end_2-start_2:.6f} second\n")
 
     elif lenToBeat == 1:
       #box =  self.sort_by_toBeat_one_value(box, toBeat, iter_num)
-      start_2 = time.perf_counter()
       for i in range(iter_num):
         strategy = box[i][0]
         toPlay, moveType = self.one_card_response_strategy(strategy, toBeat, otherHands, minNumCardinOtherHand, simulate)
         if moveType == PLAY_CARD and len(toPlay) != 0:
           print(f"max_iter_num:{i}\n")
-          end_2 = time.perf_counter()
-          print(f"time2:{end_2-start_2:.6f} second\n")
           chosen = toPlay
         elif moveType == FOLDER:
-          end_2 = time.perf_counter()
-          print(f"time2:{end_2-start_2:.6f} second\n")
           folder = True
           chosen = []
         else:
@@ -2069,7 +2061,7 @@ class NewNPC:
       print("No Solution!\n")
 
 
-    if chosen != [] and folder == False:
+    if chosen != [] and folder == False and len(toBeat) > 0:
       otherHandGroup = make_hand_group(otherHands)
       #consider strategy folder:
       #there are many conditions here:
