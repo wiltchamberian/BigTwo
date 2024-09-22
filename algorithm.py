@@ -1,6 +1,6 @@
 from classes import *
 
-VERSION = "2.18.2_expectation_update"
+VERSION = "2.18.4_expectation_update"
 
 import copy
 from functools import cmp_to_key
@@ -314,7 +314,7 @@ def compare(a1,a2):
   raise Exception("compare_unequal_length\n")
 
 def toNumber(card):
-  return ranks.index(card)*4+suits.index(card)
+  return ranks.index(card[0])*4+suits.index(card[1])
 
 def toCharacter(card):
   rank = get_rank(card)
@@ -1229,9 +1229,10 @@ class Algorithm:
         pass
       else:
         for trick in rounds[-1]:
-          cards = transform_in(trick.card)
+          cards = transform_in(trick.cards)
           if cards == toBeat:
             toBeatId = trick.playerNum
+            break
 
       first_round_first_play = False
       if len(rounds)==0 and len(toBeat) == 0:
