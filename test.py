@@ -209,11 +209,12 @@ def generate_random_file():
           pokers = sorted(pokers)
           other_hands = array[i:(4 * i)]
           other_hands = sorted(other_hands)
+          leftOvers = [len(pokers),len(pokers),len(pokers)]
 
           out_pokers = transform_out(pokers)
           file.write(f"hands: {out_pokers}\n")  
 
-          card, data = npc.play_card(pokers, other_hands, [], 0)
+          card, data = npc.play_card(pokers, other_hands, [], 0, leftOvers)
           file.write(f"play: {card}\n") 
 
           file.write(f"otherHands:{transform_out(other_hands)}\n\n")

@@ -1,7 +1,8 @@
 # test
-
+import time
 from test import *
 from read_log import * 
+
 
 def init_players(handSize):
   players = [Player()] * 4
@@ -9,18 +10,72 @@ def init_players(handSize):
     players[i].handSize = handSize[i]
   return players
 
+def play_card(hands, toBeat, otherHands, id, handSize, toBeatId = -1):
+  npc = NewNPC()
+  players =[Player(),Player(),Player(),Player()]
+  for i in range(len(handSize)):
+    players[i].handSize = handSize[i]
+  leftOvers = npc.cal_otherHands_numbers(id,players)
+
+  # box = npc.cal_good_composites(transform_in(hands), transform_in(otherHands), leftOvers)
+  # with open("show_box_expectation.txt", "w") as file:
+  #   for i in range(min(len(box), BOX_USE_LENGTH)):
+  #     ls = []
+  #     for move in box[i][0]:
+  #       ls.append(transform_out(move))
+  #     file.write(f"exp:{box[i][1]:.3f},len:{len(ls)}\n{ls}\n\n")
+
+  playInfo = PlayInfo()
+  playInfo.first_round_first_play = False
+  playInfo.leftOvers = leftOvers
+  playInfo.myHandCards = transform_in(hands)
+  playInfo.otherHands = transform_in(otherHands)
+  playInfo.toBeat = transform_in(toBeat)
+  playInfo.toBeatId = toBeatId
+  playInfo.simulate = False
+  playInfo.myPlayerNum = id
+  
+  card, data = npc.play_card(playInfo)
+  return card,data
 
 if __name__ == "__main__":
 
-  npc = NewNPC()
-  hands =  ['5C', '6D', '6C', '6S', '7D', '9C', 'QD', '2S']
-  otherHands = ['3D', '4D', '4H', '5D', '5H', '6H', '7C', '8D', '8H', '9D', '9H', '9S', 'TD', 'TC', 'TS', 'JD', 'JS', 'QC', 'KC', 'KH', 'AC', 'AH', 'AS', '2H']
+  myPlayerNum = 1
+  myHands = ['9S', 'TH', 'TS', 'JC', 'JH']
+  myHandsColor = []
+  toBeat = []
+  otherHands = ['3C', '3S', '4S', '5D', '5S', '6C', '6H', '6S', '7D', '7C', '9C', 'TD', 'TC', 'JS', 'QC', 'QH', 'KC', 'KH', 'KS', 'AC', 'AH', 'AS', '2C']
+  handSize = [6, 5, 11, 6]
+  cards, data = play_card(myHands,toBeat,otherHands,myPlayerNum,handSize)
 
-  card, data = npc.play_card(transform_in(hands), transform_in(otherHands), [], 0)
+  myPlayerNum = 1
+  myHands = ['3D', '6D', '7H', '9S', 'TH', 'TS', 'JC', 'JH', 'QD', 'QS', 'AD', '2D', '2S']
+  myHandsColor = [['3D', '6D', 'QD', 'AD', '2D']]
+  toBeat = []
+  otherHands = ['3C', '3H', '3S', '4D', '4C', '4H', '4S', '5D', '5C', '5H', '5S', '6C', '6H', '6S', '7D', '7C', '7S', '8D', '8C', '8H', '8S', '9D', '9C', '9H', 'TD', 'TC', 'JD', 'JS', 'QC', 'QH', 'KD', 'KC', 'KH', 'KS', 'AC', 'AH', 'AS', '2C', '2H']
+  handSize = [13, 13, 13, 13]
 
-  generate_random_file()
+  cards, data = play_card(myHands,toBeat,otherHands,myPlayerNum,handSize)
+
+
+  cards, data = play_card(['4C', '4S', '6D', '6H', '8C', 'JH'], [],['3C', '3H', '4H', '5H', '5S', '6C', '8H', 'QS', 'KC', 'KH'],0 ,[6, 1, 6, 3])
+  assert(cards == ['4C', '4S'])
   
-  generate_random()
+  cards, data = play_card(['3C', '4D', '5D', '5C', '7H', '8H', '9S', 'QD', 'QC', 'QS', 'KS'],[],['4H', '5H', '5S', '7D', '7C', '7S', '8D', '8C', '8S', '9D', '9C', '9H', 'JC', 'QH'],1,[6, 11, 1, 7] )
+  assert (cards == ['5D','5C','QD','QC','QS'])
+
+  cards, data = play_card(['4H', 'TC'],[],['3C', '3H', '4D', '4C', '5H', '6D', '6H', '7H', '8D', '8H', '8S', '9D', 'TD', 'TH', 'TS', 'JD', 'JS', 'KD', 'KC', 'KH', 'KS', 'AD', '2D', '2C'], 0, [2, 6, 12, 6] )
+  assert (cards== ['4H'])
+
+  cards, data = play_card( ['6H', '9S', 'TC', 'TS', 'QH', '2D', '2C', '2S'],[], ['3H', '3S', '4D', '5H', '5S', '6D', '6C', '6S', '7D', '7H', '7S', '8D', '8C', '8S', '9H', 'TD', 'TH', 'JC', 'JS', 'KC', 'KH', 'KS', 'AD', 'AC'],0,[8,8,8,8])
+  assert (cards ==['6H'])
+
+  cards, data = play_card( ['5H', '7D', 'TC', 'TS', 'QC', 'KD', '2H', '2S'],[], ['3S', '4H', '5C', '5S', '7C', '7H', '7S', '8D', '8C', '8H', '8S', '9D', 'TD', 'TH', 'JD', 'JC', 'JH', 'QD', 'QH', 'QS', 'KH', 'AD', 'AC', 'AS'],0,[8,8,8,8])
+  assert (cards ==['5H'])
+  
+  cards, data = play_card(['5C', '6D', '6C', '6S', '7D', '9C', 'QD', '2S'],[], ['3D', '4D', '4H', '5D', '5H', '6H', '7C', '8D', '8H', '9D', '9H', '9S', 'TD', 'TC', 'TS', 'JD', 'JS', 'QC', 'KC', 'KH', 'AC', 'AH', 'AS', '2H'],0,[8,8,8,8])
+  assert (cards==['5C'])
+  
 
 
   npc = NewNPC()
