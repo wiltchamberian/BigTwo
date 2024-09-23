@@ -1,6 +1,6 @@
 from classes import *
 
-VERSION = "2.18.6_expectation_update_fix_bug"
+VERSION = "2.18.12_expectation2_no_stable"
 
 import copy
 from functools import cmp_to_key
@@ -12,11 +12,13 @@ import time
 STRATEGY_TYPE_LEN = 0
 STRATEGY_TYPE_PROBABILITY = 1
 STRATEGY_TYPE_EXPECTATION = 2
+STRATEGY_TYPE_OPTIMIZED_LEN = 3
+STRATEGY_TYPE_COMPARE = 4 #compare each other
 
 
 #choose strategy
 STRATEGY_TYPE = STRATEGY_TYPE_EXPECTATION
-MAX_FOLDER_TIME_IN_A_GAME = 2
+MAX_FOLDER_TIME_IN_A_GAME = 5
 MIN_NUM_CARD_IN_OTHER_HAND_FOR_FOLDER = 3
 
 
@@ -182,8 +184,8 @@ def select_all_length_n_moves(strategy, n):
   return output
 
 def sort_strategy(strategy):
-  strategy = sorted(strategy, key = cmp_to_key(strategy_compare))
-  return strategy
+  sg = sorted(strategy, key = cmp_to_key(strategy_compare))
+  return sg
 
 def strategy_of_length_n_number(strategy, n):
   t = 0
@@ -246,8 +248,8 @@ def cal_four_value(a):
   return get_rank(a[-1])
 
 def compare_four(a1, a2):
-  rank1 = get_rank(a1)
-  rank2 = get_rank(a2)
+  rank1 = get_rank(a1[-1])
+  rank2 = get_rank(a2[-1])
   if rank1 < rank2:
     return LESS
   elif rank1 > rank2:
@@ -602,6 +604,17 @@ def cal_min_num_cards(leftOvers):
       mi = leftOvers[i]
   return mi
 
+def get_one_cards_order_fraction(cards, otherHands):
+  card = cards[0]
+  if card < otherHands[0]:
+    return 0.0
+  elif card > otherHands[-1]:
+    return 1.0
+  for i in range(len(otherHands)):
+    if card < otherHands[i]:
+      return float(i)/float(len(otherHands))
+  return 0.0
+
 def choose_from_one_strategy_new(strategy, other_hands, leftOvers, myPlayerId):
   npc = NewNPC()
 
@@ -656,10 +669,12 @@ def choose_from_one_strategy_new(strategy, other_hands, leftOvers, myPlayerId):
     # if I have lots of pairs but only a small single, definitly I'll play pairs
     q2 = npc.probability_of_bigger_pair_not_exist(splits[2][-1], otherHandGroup, leftOvers)
     q1 = npc.probability_of_bigger_one_not_exist(splits[1][-1], other_hands, leftOvers)
-    if q2 > q1:
-      return splits[2][0]
-    else: 
+    if q2 < q1:
       return splits[1][0]
+    
+    if len(splits[2])==1 and len(splits[1])>=4 and q2 < 0.9:
+      return splits[1][0]
+    return splits[2][0]
 
     d = splits[1][-1][0] - other_hands[-1]
     if d > 0:
@@ -1262,7 +1277,7 @@ class Algorithm:
           other_hands.append(i)
 
 
-      print(f"{VERSION}_id\n")
+      print(f"{VERSION}\n")
       print(f"myPlayerNum = {state.myPlayerNum}\n")
       print(f"toBeatId = {toBeatId}\n")
       print(f"myHands = {transform_out(sorted(myHandCards))}\n")
@@ -1522,7 +1537,7 @@ class NewNPC:
   #       pass
   #   return 
   
-  def cal_one_cards_expectation_length(self, split, otherHands):
+  def cal_one_cards_expectation_length_old(self, split, otherHands):
     if len(split) == 0 or len(otherHands) == 0:
       return 0.0 
 
@@ -1552,9 +1567,42 @@ class NewNPC:
       expl = len(split)
     
     return expl
+
+  def cal_one_cards_expectation_length(self, split, otherHands, otherHandsGroup, leftOvers):
+    if len(split) == 0 or len(otherHands) == 0:
+      return 0.0 
+
+    expl = 0.0
+    for i in range(len(split)//2, len(split)):
+      p = self.probability_of_bigger_one_not_exist(split[i], otherHands, leftOvers)
+      expl += 2.0 * p
+    # fracs = []
+    # for i in range(len(split)//2, len(split)):
+    #   if split[i][0] > otherHands[-1]:
+    #     fracs.append(1.0)
+    #     continue
+    #   for j in range(len(otherHands)):
+    #     if split[i][0] < otherHands[j]:
+    #       fracs.append(float(j)/len(otherHands))
+    #       break
+
+    # expl = 0.0
+    # if len(split)%2 == 0:
+    #   for i in range(len(fracs)-1, -1, -1):
+    #     #if fracs[i] >= 0.95:
+    #     expl += 2.0 * fracs[i]
+    # else:
+    #   for i in range(len(fracs)-1, 0,-1):
+    #     expl += 2.0 * fracs[i]
+    #   expl += 1.0 * fracs[0]
+
+    if expl > len(split):
+      expl = len(split)
+    
+    return expl
   
   #a very extremly formula, to be optimized (FIX ME)
-  def cal_two_cards_expectation_length(self, split, otherHands, otherHandsGroup, leftOvers):
+  def cal_two_cards_expectation_length_old(self, split, otherHands, otherHandsGroup, leftOvers):
     if len(split) == 0 or len(otherHands) == 0:
       return 0.0 
 
@@ -1589,13 +1637,65 @@ class NewNPC:
       expl = len(split) * 2
     
     return expl
+  
+  def cal_two_cards_expectation_length(self, split, otherHands, otherHandsGroup, leftOvers):
+    if len(split) == 0 or len(otherHands) == 0:
+      return 0.0 
 
-  def cal_three_cards_expectation_length(self, split, otherHands, otherHandsGroup, leftOvers):
+    #now we do sorting
+    pairs = []
+    for i in range(len(otherHandsGroup)):
+      if len(otherHandsGroup[i]) == 2:
+        pairs.append(otherHandsGroup[i])
+      elif len(otherHandsGroup[i]) == 3:
+        pairs.append(otherHandsGroup[i][1:3])
+      elif len(otherHandsGroup[i]) == 4:
+        pairs.append(otherHandsGroup[i][2:4])
+
+    pairs = sorted(pairs, key = cmp_to_key(compare_two))
+
+    if len(pairs) == 0:
+      return float(len(split)) * 2.0
+
+    ###
+    expl = 0.0
+    for i in range(len(split)//2, len(split)):
+      p = self.probability_of_bigger_pair_not_exist(split[i], otherHandsGroup, leftOvers)
+      expl += 4.0 * p
+
+    
+    # fracs = []
+    # for i in range(len(split)//2, len(split)):
+    #   if compare_two(split[i],pairs[-1])==GREATER:
+    #     fracs.append(1.0)
+    #     continue
+    #   for j in range(len(pairs)):
+    #     if compare_two(split[i], pairs[j]) == LESS:
+    #       fracs.append(float(j)/len(pairs))
+    #       break
+        
+    
+    # expl = 0.0
+    # if len(split)%2 == 0:
+    #   for i in range(len(fracs)-1, -1, -1):
+    #     expl += 4.0 * fracs[i]
+    # else:
+    #   for i in range(len(fracs)-1, 0,-1):
+    #     expl += 4.0 * fracs[i]
+    #   expl += 2.0 * fracs[0]
+
+    if expl > float(len(split)) * 2.0:
+      expl = float(len(split)) * 2.0
+    
+    return expl
+
+  def cal_three_cards_expectation_length_old(self, split, otherHands, otherHandsGroup, leftOvers):
     if len(split) == 0 or len(otherHands) == 0:
       return 0.0 
 
     #now we do sorting
     threes = []
+  
     for i in range(len(otherHandsGroup)):
       if len(otherHandsGroup[i]) == 3:
         threes.append(otherHandsGroup[i])
@@ -1606,6 +1706,10 @@ class NewNPC:
       threes.append(split[i])
 
     threes = sorted(threes, key = cmp_to_key(compare_three))
+
+    if len(threes) == 0:
+      return float(len(split)) * 3.0
+  
 
     fracs = []
     for i in range(len(split)//2, len(split)):
@@ -1619,8 +1723,57 @@ class NewNPC:
     for i in range(len(fracs)-1, -1, -1):
       if fracs[i] >= 0.9999:
         expl += 3.0 * 2
+
+
     if expl > len(split) * 3.0:
       expl = len(split) * 3.0
+    
+    return expl
+  
+  def cal_three_cards_expectation_length(self, split, otherHands, otherHandsGroup, leftOvers):
+    if len(split) == 0 or len(otherHands) == 0:
+      return 0.0 
+
+    #now we do sorting
+    threes = []
+    for i in range(len(otherHandsGroup)):
+      if len(otherHandsGroup[i]) == 3:
+        threes.append(otherHandsGroup[i])
+      elif len(otherHandsGroup[i]) == 4:
+        threes.append(otherHandsGroup[i][2:4])
+
+    threes = sorted(threes, key = cmp_to_key(compare_three))
+
+    if len(threes) == 0:
+      return float(len(split)) * 3.0
+    
+    expl = 0.0
+    for i in range(len(split)//2, len(split)):
+      p = self.probability_of_bigger_three_not_exist(split[i], otherHandsGroup, leftOvers)
+      expl += 6.0 * p
+
+    # fracs = []
+    # for i in range(len(split)//2, len(split)):
+    #   if compare_three(split[i],threes[-1])==GREATER:
+    #     fracs.append(1.0)
+    #     continue
+    #   for j in range(len(threes)):
+    #     if compare_three(split[i], threes[j]) == LESS:
+    #       fracs.append(float(j)/len(threes))
+    #       break
+        
+    
+    # expl = 0.0
+    # if len(split)%2 == 0:
+    #   for i in range(len(fracs)-1, -1, -1):
+    #     expl += 6.0 * fracs[i]
+    # else:
+    #   for i in range(len(fracs)-1, 0,-1):
+    #     expl += 6.0 * fracs[i]
+    #   expl += 3.0 * fracs[0]
+
+    if expl > float(len(split)) * 3.0:
+      expl = float(len(split)) * 3.0
     
     return expl
   
@@ -1628,7 +1781,7 @@ class NewNPC:
     splits = split_moves_according_to_length(strategy)
     expl = 0.0
     if len(splits[1]) > 0:
-      expl += self.cal_one_cards_expectation_length(splits[1], otherHands)
+      expl += self.cal_one_cards_expectation_length(splits[1], otherHands, otherHandsGroup,leftOvers)
     if len(splits[2]) > 0:
       expl += self.cal_two_cards_expectation_length(splits[2], otherHands, otherHandsGroup,leftOvers )
     if len(splits[3]) > 0:
@@ -1686,6 +1839,34 @@ class NewNPC:
     box_with_value = sorted(box_with_value, key = lambda x:x[1], reverse = reverse)
 
     return box_with_value
+  
+  def play_left_first(self, box1, box2):
+    hg1 = make_hand_group(box1)
+    hg2 = make_hand_group(box2)
+
+
+    return 
+  
+  def play_with_each_other(self, box1, box2):
+    l = 0
+    r = 0
+    l = self.play_left_first(box1, box2)
+    r = self.play_left_first(box2, box1)
+
+
+    return l,r
+
+  def cal_strategy_optimized_len(self, strategy, otherHands, otherHandsGroup, leftOvers):
+    originalLen = len(strategy)
+    splits = split_moves_according_to_length(strategy)
+    if len(splits[2])==1 and len(splits[1])> 0:
+      p = self.probability_of_bigger_pair_not_exist(splits[2][-1])
+      if p >= 0.9:
+        pass
+      
+      
+    return 
+  
 
   def cal_good_composites(self, handCards, otherHands, otherHandNumbers):
     box = []
@@ -1717,7 +1898,29 @@ class NewNPC:
       for i in range(len(box)):
         value = self.cal_strategy_expectation_length(box[i], otherHands, otherHandsGroup, otherHandNumbers)
         box[i] = [box[i], value]
+      box = self.sort_box_by_value(box, reverse = True) 
+    elif STRATEGY_TYPE == STRATEGY_TYPE_OPTIMIZED_LEN:
+      for i in range(len(box)):
+        value = self.cal_strategy_optimized_len(box[i], otherHands, otherHandsGroup, otherHandNumbers)
+        box[i] = [box[i], value]
+      box = self.sort_box_by_value(box)
+    elif STRATEGY_TYPE == STRATEGY_TYPE_COMPARE:
+      for i in range(len(box)):
+        box[i] = [box[i], len(box[i])]
+      box = self.sort_box_by_value(box)
+      length = min(len(box), BOX_USE_LENGTH)
+      winBoard = [0] * length
+      for i in range(length):
+        for j in range(i+1, length):
+          l_win, r_win = self.play_with_each_other(box[i][0],box[j][0])
+          winBoard[i] += l_win
+          winBoard[j] += r_win
+      for i in range(length):
+        box[i][1] = winBoard[i]
       box = self.sort_box_by_value(box, reverse = True)
+    else:
+      pass
+
     end5 = time.perf_counter()
     print(f"time5:{end5-start5:.6f}\n")
     # TEST
@@ -1961,6 +2164,15 @@ class NewNPC:
     return chosen
   
   
+  def beat_one_folder(self, myHandCards, myHandGroup,strategy, toBeat, otherHands, leftOvers):
+    splits = split_moves_according_to_length(strategy)
+    #only a single + a pair and single can't beat toBeat
+    if len(splits[1]) ==1 and len(splits[2])==1 and len(splits[3]) == 0 and len(splits[5]) == 0:
+      if splits[1][0][-1] < toBeat[0]:
+        if splits[2][0][-1] < otherHands[-1] and leftOvers[0]>3 and leftOvers[1]>3 and leftOvers[2]>3:
+          return True
+    return False
+
 
   def play_card(self, playInfo, myData = ""):  
     myHandCards = playInfo.myHandCards
@@ -1971,6 +2183,8 @@ class NewNPC:
     leftOvers = playInfo.leftOvers
     first_round_first_play = playInfo.first_round_first_play
     simulate = playInfo.simulate
+
+    myHandGroup = make_hand_group(myHandCards)
 
     playOrder = get_play_order(myPlayerNum, toBeatId)
 
@@ -2024,7 +2238,11 @@ class NewNPC:
           chosen = []
           break
         else:
-          pass
+          folder = self.beat_one_folder(myHandCards, myHandGroup, strategy, toBeat, otherHands, leftOvers)
+          if folder == True:
+            break
+
+
     elif lenToBeat == 2:
       #box =  self.sort_by_toBeat_two_value(box, toBeat, iter_num)
       for i in range(iter_num):
@@ -2073,11 +2291,11 @@ class NewNPC:
       # 1,2,3,5, that means if I don't beat, he could play off all. so I won't
       # now here I should folder 
       if playOrder == PREVIOUS_PLAY:
-        if toBeat[-1] >= toNumber('AD'):
+        if len(toBeat)==1 and toBeat[-1] >= toNumber('AD'):
           if True: #lastFolder and lastFolderId == 
             if leftOvers[2] not in [1,2,3,5]:
               p = self.probability_of_bigger_pair_not_exist(chosen, otherHandGroup, leftOvers)
-              if p >= 0.9:
+              if p <= 0.9 and leftOvers[0] != len(toBeat) and leftOvers[1] != len(toBeat):
                 print('strategy_folder!\n')
                 return [],str(self.current_folder_time)
       elif playOrder == POST_PLAY:
