@@ -1,6 +1,6 @@
 from classes import *
 
-VERSION = "2.18.18_noMcst_and_2cardsFolder"
+VERSION = "2.18.20_folder_simplified_just_beat"
 
 import copy
 from functools import cmp_to_key
@@ -87,9 +87,10 @@ TREE_SEARCH = 10
 MCTS_OTHER_ROLE_LOOP = 40
 MCTS_PLAY_LOOP = 1
 
-NO_PLAY = 0
-PREVIOUS_PLAY = 1
-POST_PLAY = 2
+NO_PLAY = 3
+PREVIOUS_PLAY = 2
+POST_PLAY = 0
+MIDDLE_PLAY = 1
 
 ranks = ['3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A', '2']
 suits = ['D', 'C', 'H', 'S']
@@ -116,6 +117,8 @@ def get_play_order(myId, toBeatId):
     return PREVIOUS_PLAY
   elif (myId + 1)%4 == toBeatId:
     return POST_PLAY
+  elif (toBeatId+2)%4 == myId:
+    return MIDDLE_PLAY
 
 def split_moves_according_to_length(strategy):
   output = [[],[],[],[],[],[]]
@@ -635,7 +638,7 @@ def get_one_cards_ranking(cards, otherHands):
     if cards[0] > otherHands[i]:
       return n
     n += 1
-  return
+  return n
 
 def choose_from_one_strategy_new(strategy, other_hands, leftOvers, myPlayerId):
   npc = NewNPC()
@@ -653,6 +656,56 @@ def choose_from_one_strategy_new(strategy, other_hands, leftOvers, myPlayerId):
   move_count = len(sg)
 
   minNumCardInOtherHand = cal_min_num_cards(leftOvers)
+
+  total_play_number = len(splits[1])+len(splits[2])+len(splits[3])+len(splits[5])
+  residue_play_number = total_play_number
+  total_series_number = 0
+  for split in splits:
+    if len(split)>0:
+      total_series_number += 1
+
+  exp1 = 0.0
+  exp2 = 0.0
+  exp3 = 0.0
+  exp5 = float(len(splits[5]))*5.0
+
+  #if there exist must winner card, play this!
+  # all the one cards are a series, all two cards, etc...
+  must_win_series_number = 0
+  one_series_must_win = False
+  two_series_must_win = False
+  three_series_must_win = False
+
+  ready_to_play_numCards = 0
+  if len(splits[1]) > 0:
+    exp1 = npc.cal_one_cards_expectation_length([], splits[1], other_hands, otherHandGroup, leftOvers)
+    if exp1 >= (float(len(splits[1]))-0.00001):
+      must_win_series_number += 1
+      residue_play_number -= len(splits[1])
+      one_series_must_win = True
+
+      if residue_play_number == 1:
+        return splits[1][0]
+
+  if len(splits[2]) > 0:
+    exp2 = npc.cal_two_cards_expectation_length([], splits[2], other_hands, otherHandGroup, leftOvers)
+    if exp2 >= (float(2*len(splits[2]))-0.00001):
+      must_win_series_number += 1
+      residue_play_number -= len(splits[2])
+      two_series_must_win = True
+
+      if residue_play_number == 1:
+        return splits[2][0]
+      
+  if len(splits[3]) > 0:
+    exp3 = npc.cal_three_cards_expectation_length([], splits[3], other_hands, otherHandGroup, leftOvers)
+    if exp3 >= (float(3*len(splits[3]))-0.00001):
+      must_win_series_number +=1 
+      three_series_must_win = True
+      residue_play_number -= len(splits[3])
+      if residue_play_number == 1:
+        return splits[3][0]
+  
   #in this case we can only play backward
   if minNumCardInOtherHand == 1:
     for move in splits[2]:
@@ -694,8 +747,14 @@ def choose_from_one_strategy_new(strategy, other_hands, leftOvers, myPlayerId):
     if q2 < q1:
       return splits[1][0]
     
-    if len(splits[2])==1 and len(splits[1])>=4 and q2 < 0.9:
-      return splits[1][0]
+    if len(splits[2])==1 and len(splits[1])>=4:
+      if q2 < 0.9:
+        return splits[1][0]
+      else:
+        # this shows the singles are not bigger enough but pairs are big, play single
+        if splits[2][0][0] > splits[1][-1][0]:
+          return splits[1][0]
+
     return splits[2][0]
 
     d = splits[1][-1][0] - other_hands[-1]
@@ -743,8 +802,18 @@ def choose_from_one_strategy_new(strategy, other_hands, leftOvers, myPlayerId):
     else:
      return splits[1][0]
 
-  choice = random.randint(0, move_count-1)
-  #return sg[choice]
+
+  mm = max(exp1,exp2,exp3,exp5)
+  if len(splits[1])> 0 and mm == exp1:
+    return splits[1][0]
+  if len(splits[2])> 0 and mm == exp2:
+    return splits[2][0]
+  if len(splits[3])> 0 and mm == exp3:
+    return splits[3][0]
+  if len(splits[5])> 0 and mm == exp5:
+    return splits[5][0]
+
+
   index = get_longest_move_index(sg)
   return sg[index]
 
@@ -2160,17 +2229,17 @@ class NewNPC:
     box = []
     current = []
 
-    start3 = time.perf_counter()
+    # start3 = time.perf_counter()
     otherHandsGroup = make_hand_group(otherHands)
     self.deep_search5(handCards,current, box)
-    end3 = time.perf_counter()
-    print(f"time3:{end3-start3:.6f}\n")
+    # end3 = time.perf_counter()
+    # print(f"time3:{end3-start3:.6f}\n")
 
     #merge 3+2, 4+1 composites
-    start4 = time.perf_counter()
+    # start4 = time.perf_counter()
     self.merge_moves_in_each_strategy(box)
-    end4 = time.perf_counter()
-    print(f"time4:{end4-start4:.6f}\n")
+    # end4 = time.perf_counter()
+    # print(f"time4:{end4-start4:.6f}\n")
 
     start5 = time.perf_counter()
     real_length = min(len(box), BOX_USE_LENGTH)
@@ -2213,8 +2282,8 @@ class NewNPC:
     else:
       pass
 
-    end5 = time.perf_counter()
-    print(f"time5:{end5-start5:.6f}\n")
+    # end5 = time.perf_counter()
+    # print(f"time5:{end5-start5:.6f}\n")
 
     end_1 = time.perf_counter()
     print(f"cal_good_composites:{end_1-start_1:.6f} second\n")
@@ -2491,8 +2560,10 @@ class NewNPC:
     simulate = playInfo.simulate
 
     myHandGroup = make_hand_group(myHandCards)
+    myHandSplits = split_moves_according_to_length(myHandGroup)
 
     playOrder = get_play_order(myPlayerNum, toBeatId)
+    toBeatOrder = playOrder
 
     lenToBeat = len(toBeat) 
 
@@ -2524,6 +2595,7 @@ class NewNPC:
 
     chosen = []
     folder = False
+    looking_strategy = []
     if lenToBeat == 0:
       chosen = choose_from_one_strategy_new(box[0][0], otherHands, otherHandsNumbers, myPlayerNum)
 
@@ -2535,14 +2607,18 @@ class NewNPC:
         if moveType == PLAY_CARD and len(toPlay) != 0:
           print(f"max_iter_num:{i}\n")
           chosen = toPlay
+          looking_strategy = strategy
           break
         elif moveType == FOLDER:
           folder = True
-          chosen = []
+          chosen = toPlay
+          looking_strategy = strategy
           break
         else:
           folder = self.beat_one_folder(myHandCards, myHandGroup, strategy, toBeat, otherHands, leftOvers)
           if folder == True:
+            chosen = []
+            looking_strategy = strategy
             break
 
 
@@ -2560,9 +2636,8 @@ class NewNPC:
               break
             chosen = s
             break
-        if folder == True:
-          break
-        if len(chosen)>0:
+        if folder == True or len(chosen) > 0:
+          looking_strategy = strategy
           break
     elif lenToBeat ==3:
       #box =  self.sort_by_toBeat_three_value(box, toBeat, iter_num)
@@ -2598,7 +2673,22 @@ class NewNPC:
     if chosen == [] and folder == False:
       print("No Solution!\n")
 
+    #strategy not folder(special case)
+    if len(toBeat) == 1 and folder == True and len(chosen) != 0 and len(looking_strategy)>0:
+      print("strategy_not_folder!\n")
+      if leftOvers[toBeatOrder] in [1,2,3,5]:
+        return transform_out(chosen), str(self.current_folder_time)
+      if leftOvers[toBeatOrder] in [10]:
+        splits = split_moves_according_to_length(looking_strategy)
+        if len(splits[5]) == 0 or card5_type(splits[5][-1])<= FLUSH:
+           b1 = (len(splits[2]) > 0 and splits[2][-1][0] >= toNumber('AD'))
+           b2 = (len(splits[3])) > 0 and splits[3][-1][0] >= toNumber('AD')
+           if b1 or b2:
+            return transform_out(chosen), str(self.current_folder_time)
 
+
+
+    #strategy folder
     if chosen != [] and folder == False and len(toBeat) > 0:
       otherHandGroup = make_hand_group(otherHands)
       #consider strategy folder:
@@ -2612,10 +2702,35 @@ class NewNPC:
         if len(toBeat)==1 and toBeat[-1] >= toNumber('AD'):
           if True: #lastFolder and lastFolderId == 
             if leftOvers[2] not in [1,2,3,5]:
-              p = self.probability_of_bigger_pair_not_exist(chosen, otherHandGroup, leftOvers)
+              p = self.probability_of_bigger_one_not_exist(chosen, otherHands, leftOvers)
               if p <= 0.9 and leftOvers[0] != len(toBeat) and leftOvers[1] != len(toBeat):
-                print('strategy_folder!\n')
+                print('strategy_folder1!\n')
                 return [],str(self.current_folder_time)
+        if len(toBeat) == 2:
+          splits = split_moves_according_to_length(looking_strategy)
+          p = self.probability_of_bigger_pair_not_exist(toBeat, otherHandGroup, leftOvers)
+          #in this case, the chose pair is my largest pair, only consider folder in this case
+          if chosen == splits[2][-1]:
+            #in case the previous guy win the game
+            if leftOvers[2] not in [1,2,3,5]:
+              #in case other guy win the game
+              if (leftOvers[0] != len(toBeat) and leftOvers[1] != len(toBeat)) or (p>=0.999):
+                #if other people probably have pairs bigger than my choice:
+                #that means my pair is not big enough, than I should play but it stll depends
+                
+                #if my double is small it seems there is no point to folder:
+                p_me = self.probability_of_bigger_pair_not_exist(chosen, otherHandGroup, leftOvers)
+                if p_me < 0.9:
+                  if chosen[-1] >= toNumber('AD'):
+                    print('strategy_folder2!\n')
+                    return [],str(self.current_folder_time)
+                else:
+                  print('strategy_folder2!\n')
+                  return [],str(self.current_folder_time)
+
+
+
+          return True
       elif playOrder == POST_PLAY:
         pass
       else:
@@ -2623,53 +2738,50 @@ class NewNPC:
 
     return transform_out(chosen), str(self.current_folder_time)
   
-  def whether_fold_one(self,one_card, minNumCardinOtherHand, otherHands):
-    print("whether_fold_one!\n")
+  def whether_fold_one(self, strategy, one_card_moves, just_beat_card, max_single_card, minNumCardinOtherHand, otherHands):
+    if just_beat_card < max_single_card:
+      #in this case normally don't folder
+      return False
+    
+    #in this case there is bigger single card greater than my card so I folder
     p_max = otherHands[-1]
-    if p_max - one_card > 0 and (p_max - one_card) < 4 and minNumCardinOtherHand > 2 :
+    rk = get_one_cards_ranking([max_single_card], otherHands)
+    if p_max - max_single_card > 0 and rk <= 4 and minNumCardinOtherHand > 2 :
+      print("whether_folder1\n")
       return True
+    
+    #in this case there is no bigger single card greater than my card,
+    #but my second biggest single card is large and not large enough, consider folder
+    if len(one_card_moves)>=2:
+      rk2 = get_one_cards_ranking(one_card_moves[-2], otherHands)
+      if p_max - one_card_moves[-2][0] > 0 and rk2 <= 3 and minNumCardinOtherHand > 2:
+        print("whether_folder2\n")
+        return True
+
     return False 
   
-  def one_card_response_strategy(self, strategy, toBeat, otherHands, minNumCardinOtherHand, simulate):
-    num_1 = strategy_of_length_n_number(strategy,1)
-    if num_1 == 0:
+  def one_card_response_strategy(self, strategy, toBeat, otherHands, minNumCardinOtherHand, simulate):    
+    moves = select_all_length_n_moves(strategy, 1)
+    if len(moves) == 0:
       return [], NOBEAT
     
-    moves = select_all_length_n_moves(strategy, 1)
-    card = moves[-1][0]
-    if card <= toBeat[0]:
+    max_single_card = moves[-1][0]
+    if max_single_card <= toBeat[0]:
       return [], NOBEAT
+
+    just_beat_card = max_single_card
+    for move in moves:
+      if move[0] > toBeat[0]:
+        just_beat_card = move[0]
+        break
      
-    fold = self.whether_fold_one(card, minNumCardinOtherHand, otherHands)
+    fold = self.whether_fold_one(strategy, moves, just_beat_card, max_single_card, minNumCardinOtherHand, otherHands)
     if fold == True:
       if self.current_folder_time < MAX_FOLDER_TIME_IN_A_GAME:
         self.current_folder_time += 1
         print("folder!\n")
-        return [], FOLDER
-
-    if simulate == False and len(otherHands) > 0:
-      diff = card - otherHands[-1]
-      if diff > 0:
-        pass
-        if (num_1 == 1) or (moves[-2][0] < toBeat[0] and len(moves) > 2):
-          if minNumCardinOtherHand >= MIN_NUM_CARD_IN_OTHER_HAND_FOR_FOLDER:
-            mid_cards = []
-            for i in range(toBeat[0] +1, card):
-              mid_cards.append(i)
-            for mid in mid_cards:
-              if mid in otherHands:
-                if self.current_folder_time < MAX_FOLDER_TIME_IN_A_GAME:
-                  self.current_folder_time += 1
-                  print("folder!\n")
-                  return [],FOLDER
-      else:
-        pass
-        if diff >=(-4) and minNumCardinOtherHand >= MIN_NUM_CARD_IN_OTHER_HAND_FOR_FOLDER and (num_1 == 1 or moves[-2][0] < toBeat[0]):
-          if self.current_folder_time < MAX_FOLDER_TIME_IN_A_GAME:
-            self.current_folder_time += 1
-            print("folder2!\n")
-            return [],FOLDER
-          
+        return [just_beat_card], FOLDER
+    
     for move in moves:
       if move[0] > toBeat[0]:
         return move, PLAY_CARD
