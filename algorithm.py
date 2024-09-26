@@ -1,6 +1,6 @@
 from classes import *
 
-VERSION = "2.18.26_exp3_bug_fix"
+VERSION = "2.18.27_BOX_USE_LENGTH_50"
 
 import copy
 from functools import cmp_to_key
@@ -31,7 +31,7 @@ PLAY_CARD = 2
 
 
 
-BOX_USE_LENGTH = 20
+BOX_USE_LENGTH = 50
 
 CARD_3D = 0
 
@@ -2153,12 +2153,23 @@ class NewNPC:
     return False
 
   def two_cards_folder(self, s, strategy, otherHands, leftOvers):
+    two_cards_moves = select_all_length_n_moves(strategy, 2)
+    if two_cards_moves[-1] != s:
+      return False
+    
+    one_cards_moves = select_all_length_n_moves(strategy, 1)
+    
+    #2 cards folder is for split 2 cards to bring away small singles
+    #wait big 2cards go away
+
     isFolder = False
     p = self.probability_of_bigger_one_not_exist([s[1]], otherHands, leftOvers)
     if p > 0.99:
-      isFolder = True
+      if (len(one_cards_moves)>0):
+        isFolder = True
     if s[1] > toNumber('2D'):
-      isFolder = True
+      if (len(one_cards_moves)>0):
+        isFolder = True
     
     mi = min(min(leftOvers[0],leftOvers[1]),leftOvers[2])
     if mi == 2:
@@ -2166,6 +2177,10 @@ class NewNPC:
     return isFolder
 
   def three_cards_folder(self, s, strategy, otherHands, leftOvers):
+    three_cards_moves = select_all_length_n_moves(strategy, 3)
+    if three_cards_moves[-1] != s:
+      return False
+
     isFolder = False
     p = self.probability_of_bigger_one_not_exist([s[2]], otherHands, leftOvers)
     if p > 0.99:
