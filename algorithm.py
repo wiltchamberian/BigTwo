@@ -1,6 +1,6 @@
 from classes import *
 
-VERSION = "2.18.27_BOX_USE_LENGTH_50"
+VERSION = "2.18.28_use_value_to_composite"
 
 import copy
 from functools import cmp_to_key
@@ -2268,10 +2268,10 @@ class NewNPC:
     #tackle ties, if has same mark, bigger singles would be prefered
     v1 = box[0][1]
     split_index = iter_num
-    for i in range(iter_num):
-      if box[i][1] < v1:
-        split_index = i
-        break
+    # for i in range(iter_num):
+    #   if box[i][1] < v1:
+    #     split_index = i
+    #     break
 
     for i in range(split_index):
       distrib  = self.cal_numeric_value_distrib(box[i][0])
@@ -2279,8 +2279,8 @@ class NewNPC:
     box[0:split_index] = sorted(box[0:split_index], key = cmp_to_key(distrib_compare), reverse = True)
 
     #recover value
-    for i in range(split_index):
-      box[i][1] = v1
+    # for i in range(split_index):
+    #   box[i][1] = v1
 
 
     

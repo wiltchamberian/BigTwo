@@ -46,9 +46,29 @@ def play_card(hands, toBeat, otherHands, id, handSize, toBeatId = -1, folder_tim
   return card,data
 
 if __name__ == "__main__":
-
+  folder_time = 0
   for i in range(-1):
     print("abcd")
+
+  myPlayerNum = 0
+  toBeatId = -1
+  myHands = ['3D', '3S', '4D', '4H', '5C', '7D', '9D', '9C', 'JC', 'QD', 'QC', 'KD', '2H']
+  myHandsColor = [['3D', '4D', '7D', '9D', 'QD', 'KD']]
+  toBeat = []
+  otherHands = ['3C', '3H', '4C', '4S', '5D', '5H', '5S', '6D', '6C', '6H', '6S', '7C', '7H', '7S', '8D', '8C', '8H', '8S', '9H', '9S', 'TD', 'TC', 'TH', 'TS', 'JD', 'JH', 'JS', 'QH', 'QS', 'KC', 'KH', 'KS', 'AD', 'AC', 'AH', 'AS', '2D', '2C', '2S']
+  handSize = [13, 13, 13, 13]
+  cards, data = play_card(myHands,toBeat,otherHands,myPlayerNum,handSize, toBeatId = toBeatId ,folder_time = folder_time) 
+  assert(cards == ['3D' ,'3S'])
+
+  myPlayerNum = 1
+  toBeatId = 0
+  myHands = ['4S', '6H', '7D', 'TH', '2D']
+  myHandsColor = []
+  toBeat = []
+  otherHands = ['3C', '3H', '3S', '4D', '4H', '5D', '5C', '5H', '5S', '6D', '6C', '6S', '7C', '7H', '8C', '9C', '9H', 'JS', '2S']
+  handSize = [5, 6, 4, 10]
+  cards, data = play_card(myHands,toBeat,otherHands,myPlayerNum,handSize, toBeatId = toBeatId ,folder_time = folder_time) 
+  assert(cards == ['4S'])
 
   myPlayerNum = 0
   toBeatId = 1
