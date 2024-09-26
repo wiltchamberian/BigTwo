@@ -1,6 +1,6 @@
 from classes import *
 
-VERSION = "2.18.25_add_numeric_sort"
+VERSION = "2.18.26_exp3_bug_fix"
 
 import copy
 from functools import cmp_to_key
@@ -1378,13 +1378,14 @@ class NewNPC:
           p_4_in_one += float(leftOvers[1]*(leftOvers[1]-1)*(leftOvers[1]-2)*(leftOvers[1]-3))/24/denomitor
         if(leftOvers[1]>=4):
           p_4_in_one += float(leftOvers[2]*(leftOvers[2]-1)*(leftOvers[2]-2)*(leftOvers[2]-3))/24/denomitor
+        # 3 cards of 4 in one
         p_3_in_one = 0.0
         if(leftOvers[0]>=3):
-          p_3_in_one += float(leftOvers[0]*(leftOvers[0]-1)*leftOvers[0]-2)/6 * leftOvers[1] * leftOvers[2]/denomitor
+          p_3_in_one += float(leftOvers[0]*(leftOvers[0]-1)*leftOvers[0]-2)/6 * (leftOvers[1] + leftOvers[2])/denomitor
         if(leftOvers[1]>=3):
-          p_3_in_one += float(leftOvers[1]*(leftOvers[1]-1)*leftOvers[1]-2)/6 * leftOvers[0] * leftOvers[2]/denomitor
+          p_3_in_one += float(leftOvers[1]*(leftOvers[1]-1)*leftOvers[1]-2)/6 * (leftOvers[0] + leftOvers[2])/denomitor
         if(leftOvers[2]>=3):
-          p_3_in_one += float(leftOvers[2]*(leftOvers[2]-1)*leftOvers[2]-2)/6 * leftOvers[0] * leftOvers[1]/denomitor
+          p_3_in_one += float(leftOvers[2]*(leftOvers[2]-1)*leftOvers[2]-2)/6 * (leftOvers[0] + leftOvers[1])/denomitor
         p_not_together=  1.0 - (p_4_in_one + p_3_in_one)
         p = p * p_not_together
 
@@ -1699,7 +1700,7 @@ class NewNPC:
       if len(otherHandsGroup[i]) == 3:
         threes.append(otherHandsGroup[i])
       elif len(otherHandsGroup[i]) == 4:
-        threes.append(otherHandsGroup[i][2:4])
+        threes.append(otherHandsGroup[i][1:4])
 
     threes = sorted(threes, key = cmp_to_key(compare_three))
 

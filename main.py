@@ -50,6 +50,16 @@ if __name__ == "__main__":
   for i in range(-1):
     print("abcd")
 
+  myPlayerNum = 2
+  toBeatId = 3
+  myHands = ['5C', '5H', '5S', '8C', 'TH', 'JC']
+  myHandsColor = []
+  toBeat = []
+  otherHands = ['4D', '4C', '4H', '6D', '6C', '6S', '7D', '7C', '7H', '7S', '8D', '9D', '9C', 'TD', 'TC', 'TS', 'JD', 'JS', 'QD', 'KH', 'KS', '2D']
+  handSize = [12, 3, 6, 7]
+  folder_time = 0
+  cards, data = play_card(myHands,toBeat,otherHands,myPlayerNum,handSize, toBeatId = toBeatId ,folder_time = folder_time) 
+
   myPlayerNum = 1
   toBeatId = -1
   myHands = ['3D', '4D', '4H', '5C', '6C', '8D', '9H', 'TD', 'TS', 'JD', '2D', '2H', '2S']
@@ -59,6 +69,7 @@ if __name__ == "__main__":
   handSize = [13, 13, 13, 13]
   folder_time = 0
   cards, data = play_card(myHands,toBeat,otherHands,myPlayerNum,handSize, toBeatId = toBeatId ,folder_time = folder_time) 
+  assert(cards == ['3D', '4D', '8D', 'TD', 'JD'])
 
   myPlayerNum = 1
   toBeatId = 0
