@@ -52,6 +52,16 @@ if __name__ == "__main__":
 
   myPlayerNum = 3
   toBeatId = 2
+  myHands = ['3C', '4C', '4S', '5D', '6H', '8C', '8S', '9H', 'JS', 'KS', 'AD', 'AS', '2D']
+  myHandsColor = [['4S', '8S', 'JS', 'KS', 'AS']]
+  toBeat = ['7D', '7H']
+  otherHands = ['3H', '4D', '4H', '6D', '8D', '8H', '9C', '9S', 'TC', 'TH', 'TS', 'JC', 'JH', 'QH', 'KC', 'KH', 'AC', 'AH', '2C', '2H', '2S']
+  handSize = [6, 8, 7, 13]
+  folder_time = 0
+  cards, data = play_card(myHands,toBeat,otherHands,myPlayerNum,handSize, toBeatId = toBeatId ,folder_time = folder_time) 
+
+  myPlayerNum = 3
+  toBeatId = 2
   myHands = ['3C', '5D', '5S', '7C', 'TC', 'JC', 'QD', 'QC', 'QH']
   myHandsColor = [['3C', '7C', 'TC', 'JC', 'QC']]
   toBeat = []

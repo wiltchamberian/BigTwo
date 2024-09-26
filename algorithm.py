@@ -1,6 +1,6 @@
 from classes import *
 
-VERSION = "2.18.20_folder_simplified_just_beat"
+VERSION = "2.18.22_lead_play_sprint_return_bugfixed"
 
 import copy
 from functools import cmp_to_key
@@ -2727,10 +2727,6 @@ class NewNPC:
                 else:
                   print('strategy_folder2!\n')
                   return [],str(self.current_folder_time)
-
-
-
-          return True
       elif playOrder == POST_PLAY:
         pass
       else:
