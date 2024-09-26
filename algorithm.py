@@ -1,6 +1,6 @@
 from classes import *
 
-VERSION = "2.18.22_lead_play_sprint_return_bugfixed"
+VERSION = "2.18.23_lead_play_sprint_fixe_folder_return"
 
 import copy
 from functools import cmp_to_key
@@ -95,6 +95,16 @@ MIDDLE_PLAY = 1
 ranks = ['3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A', '2']
 suits = ['D', 'C', 'H', 'S']
 
+def complement(hands):
+  all = [0]*52
+  for hand in hands:
+    all[hand]=1
+  output = []
+  for i in range(52):
+    if all[i]==0:
+      output.append(all[i])
+  return output
+  
 def get_rank(a):
   return a//4
 
@@ -718,7 +728,8 @@ def choose_from_one_strategy_new(strategy, other_hands, leftOvers, myPlayerId):
       return splits[1][j]
 
   #strategy1: if i have a five and two single, if the bigger single is not big enough
-  #play the five, else play the small single
+  #play the five, else play the small single 
+  #the reason is if I play small single first, I have a chance to play the bigger single, but it would be beat, then no chance to play five.
   if moveLengths[5] == 1:
     if moveLengths[1] == 2 and  move_count ==3:
       re = compare_one(splits[1][-1], [other_hands[-1]])
@@ -802,6 +813,11 @@ def choose_from_one_strategy_new(strategy, other_hands, leftOvers, myPlayerId):
     else:
      return splits[1][0]
 
+  #only fives
+  if moveLengths[5]>0 and moveLengths[1]==0 and moveLengths[2] == 0 and moveLengths[3] == 0:
+    #play bigger five first
+    return splits[5][-1]
+    
 
   mm = max(exp1,exp2,exp3,exp5)
   if len(splits[1])> 0 and mm == exp1:
@@ -2675,8 +2691,8 @@ class NewNPC:
 
     #strategy not folder(special case)
     if len(toBeat) == 1 and folder == True and len(chosen) != 0 and len(looking_strategy)>0:
-      print("strategy_not_folder!\n")
       if leftOvers[toBeatOrder] in [1,2,3,5]:
+        print("strategy_not_folder!\n")
         return transform_out(chosen), str(self.current_folder_time)
       if leftOvers[toBeatOrder] in [10]:
         splits = split_moves_according_to_length(looking_strategy)
@@ -2684,6 +2700,7 @@ class NewNPC:
            b1 = (len(splits[2]) > 0 and splits[2][-1][0] >= toNumber('AD'))
            b2 = (len(splits[3])) > 0 and splits[3][-1][0] >= toNumber('AD')
            if b1 or b2:
+            print("strategy_not_folder2!\n")
             return transform_out(chosen), str(self.current_folder_time)
 
 
@@ -2732,6 +2749,8 @@ class NewNPC:
       else:
         pass
 
+    if folder == True:
+      return [], str(self.current_folder_time)
     return transform_out(chosen), str(self.current_folder_time)
   
   def whether_fold_one(self, strategy, one_card_moves, just_beat_card, max_single_card, minNumCardinOtherHand, otherHands):

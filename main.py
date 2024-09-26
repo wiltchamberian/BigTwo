@@ -50,6 +50,29 @@ if __name__ == "__main__":
   for i in range(-1):
     print("abcd")
 
+  myPlayerNum = 2
+  toBeatId = 1
+  toBeat = ['AS']
+  played_cards = ['3C', '3D','5H','8S','JH','AS']
+  myHands = ['2S','AH','8C', '8H', '9D', '9C', '9S','QD', 'QH', 'QS', 'KC', 'KS']
+  otherHands = transform_out(complement(transform_in(myHands + played_cards)))
+  handSize = [11,11,12,12]
+  folder_time = 0
+  cards, data = play_card(myHands,toBeat,otherHands,myPlayerNum,handSize, toBeatId = toBeatId ,folder_time = folder_time) 
+  assert(cards == ['2S'])
+
+  myPlayerNum = 2
+  toBeatId = 1
+  toBeat = []
+  played_cards = ['3C', '3D','5H','8S','JH','AS','2S']
+  myHands = ['AH','8C', '8H', '9D', '9C', '9S','QD', 'QH', 'QS', 'KC', 'KS']
+  otherHands = transform_out(complement(transform_in(myHands + played_cards)))
+  handSize = [11,11,11,12]
+  folder_time = 0
+  cards, data = play_card(myHands,toBeat,otherHands,myPlayerNum,handSize, toBeatId = toBeatId ,folder_time = folder_time) 
+  assert(cards == ['8C', '8H', '9D', '9C', '9S'])
+
+
   myPlayerNum = 3
   toBeatId = 2
   myHands = ['3C', '4C', '4S', '5D', '6H', '8C', '8S', '9H', 'JS', 'KS', 'AD', 'AS', '2D']
