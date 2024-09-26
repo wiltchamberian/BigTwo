@@ -1,6 +1,6 @@
 from classes import *
 
-VERSION = "2.18.23_lead_play_sprint_fixe_folder_return"
+VERSION = "2.18.25_add_numeric_sort"
 
 import copy
 from functools import cmp_to_key
@@ -200,6 +200,32 @@ def sort_strategy(strategy):
   sg = sorted(strategy, key = cmp_to_key(strategy_compare))
   return sg
 
+def distrib_compare(box1, box2):
+  dis1 = box1[1]
+  dis2 = box2[1]
+
+  if dis1[1] < dis2[1]:
+    return LESS 
+  elif dis1[1] > dis2[1]:
+    return GREATER
+  
+  if dis1[2] < dis2[2]:
+    return LESS
+  elif dis1[2] > dis2[2]:
+    return GREATER 
+  
+  if dis1[3] < dis2[3]:
+    return LESS
+  elif dis1[3] > dis2[3]:
+    return GREATER
+
+  if dis1[5] <dis2[5]:
+    return LESS 
+  elif dis1[5]> dis2[5]:
+    return GREATER
+
+  return EQUAL
+
 def strategy_of_length_n_number(strategy, n):
   t = 0
   for s in strategy:
@@ -227,6 +253,12 @@ def compare_one(a1, a2):
 #return a number represent the value of a pair, so that we can compare two pairs for which is bigger by this value
 def cal_two_value(a):
   return max(a[0],a[1])
+
+def cal_three_value(a):
+  return get_rank(a[0])
+
+def cal_five_value(a):
+  return 5.0
 
 def compare_two(a1,a2):
   rank1 = get_rank(a1[0])
@@ -2564,6 +2596,50 @@ class NewNPC:
     if mi == 3:
       isFolder = False
     return isFolder
+
+
+  def cal_numeric_value_distrib(self, strategy):
+    distrib = [0,0,0,0,0,0]
+    splits = split_moves_according_to_length(strategy)
+    
+    #cal later half value
+    s1 =  len(splits[1])//2
+    d1 =  len(splits[1]) - s1
+    for i in range(s1, len(splits[1])):
+      distrib[1] += splits[1][i][0]
+    if(d1 > 0):
+      distrib[1] = float(distrib[1])/d1
+    else:
+      distrib[1] = 10000
+
+    s2 =  len(splits[2])//2
+    d2 =  len(splits[2]) - s2
+    for i in range(s2, len(splits[2])):
+      distrib[2] += cal_two_value(splits[2][i])
+    if d2 > 0:
+      distrib[2] = float(distrib[2])/d2
+    else:
+      distrib[2] = 10000
+
+    s3 = len(splits[3])//2
+    d3 = len(splits[3]) - s3
+    for i in range(s3, len(splits[3])):
+      distrib[3] += cal_three_value(splits[3][i])
+    if d3 > 0:
+      distrib[3] = float(distrib[3])/d3
+    else:
+      distrib[3] = 10000
+
+    s5 = len(splits[5])//2
+    d5 = len(splits[5]) - s5
+    for i in range(s5, len(splits[5])):
+      distrib[5] += cal_five_value(splits[5][i])
+    if d5>0:
+      distrib[5] = float(distrib[5])/d5
+    else:
+      distrib[5] = 10000
+      
+    return distrib
   
   def play_card(self, playInfo, myData = ""):  
     myHandCards = playInfo.myHandCards
@@ -2591,6 +2667,25 @@ class NewNPC:
         minNumCardinOtherHand = min(minNumCardinOtherHand, leftOvers[i])
 
     box = self.cal_good_composites([], myHandCards, otherHands, otherHandsNumbers)
+    iter_num = min(len(box), BOX_USE_LENGTH)
+
+    #tackle ties, if has same mark, bigger singles would be prefered
+    v1 = box[0][1]
+    split_index = iter_num
+    for i in range(iter_num):
+      if box[i][1] < v1:
+        split_index = i
+        break
+
+    for i in range(split_index):
+      distrib  = self.cal_numeric_value_distrib(box[i][0])
+      box[i][1] = distrib 
+    box[0:split_index] = sorted(box[0:split_index], key = cmp_to_key(distrib_compare), reverse = True)
+
+    #recover value
+    for i in range(split_index):
+      box[i][1] = v1
+
 
     
     if first_round_first_play:
@@ -2607,7 +2702,7 @@ class NewNPC:
                   print("card_3d2\n")
                   return transform_out(s+g),str(self.current_folder_time)
             return transform_out(s), str(self.current_folder_time)
-    iter_num = min(len(box), BOX_USE_LENGTH)
+    
 
     chosen = []
     folder = False
@@ -2648,7 +2743,7 @@ class NewNPC:
             folder = self.two_cards_folder(s, strategy, otherHands, otherHandsNumbers)
             if folder == True:
               print("two_cards_folder!\n")
-              chosen = []
+              #chosen = []
               break
             chosen = s
             break
@@ -2691,9 +2786,9 @@ class NewNPC:
 
     #strategy not folder(special case)
     if len(toBeat) == 1 and folder == True and len(chosen) != 0 and len(looking_strategy)>0:
-      if leftOvers[toBeatOrder] in [1,2,3,5]:
-        print("strategy_not_folder!\n")
-        return transform_out(chosen), str(self.current_folder_time)
+      #if leftOvers[toBeatOrder] in [1,2,3,5]:
+        #print("strategy_not_folder!\n")
+        #return transform_out(chosen), str(self.current_folder_time)
       if leftOvers[toBeatOrder] in [10]:
         splits = split_moves_according_to_length(looking_strategy)
         if len(splits[5]) == 0 or card5_type(splits[5][-1])<= FLUSH:
@@ -2703,6 +2798,11 @@ class NewNPC:
             print("strategy_not_folder2!\n")
             return transform_out(chosen), str(self.current_folder_time)
 
+    #strategy not folder, in case the toBeatPlayer could play off all his cards:
+    if folder == True and len(chosen) != 0:
+      if leftOvers[toBeatOrder] in [1,2,3,5]:
+        print("strategy_not_folder3!\n")
+        return transform_out(chosen), str(self.current_folder_time)
 
 
     #strategy folder
@@ -2780,6 +2880,11 @@ class NewNPC:
     if len(moves) == 0:
       return [], NOBEAT
     
+    if minNumCardinOtherHand == 1:
+      #play from big to small
+      print("play big to small1!")
+      return moves[-1],PLAY_CARD
+
     max_single_card = moves[-1][0]
     if max_single_card <= toBeat[0]:
       return [], NOBEAT
