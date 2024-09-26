@@ -2273,6 +2273,16 @@ class NewNPC:
         split_index = i
         break
 
+    if split_index < iter_num:
+      v2 =box[split_index][1]
+      t_start = split_index
+      split_index = iter_num
+      for i in range(t_start, iter_num):
+        if box[i][1] < v2:
+          split_index = i
+          break
+    
+
     for i in range(split_index):
       distrib  = self.cal_numeric_value_distrib(box[i][0])
       box[i][1] = distrib 
