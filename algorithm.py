@@ -1,6 +1,6 @@
 from classes import *
 
-VERSION = "2.18.27_BOX_USE_LENGTH_50"
+VERSION = "2.19_numeric_simplified"
 
 import copy
 from functools import cmp_to_key
@@ -714,17 +714,12 @@ def choose_from_one_strategy_new(strategy, other_hands, leftOvers, myPlayerId):
   #if there exist must winner card, play this!
   # all the one cards are a series, all two cards, etc...
   must_win_series_number = 0
-  one_series_must_win = False
-  two_series_must_win = False
-  three_series_must_win = False
 
-  ready_to_play_numCards = 0
   if len(splits[1]) > 0:
     exp1 = npc.cal_one_cards_expectation_length([], splits[1], other_hands, otherHandGroup, leftOvers)
     if exp1 >= (float(len(splits[1]))-0.00001):
       must_win_series_number += 1
       residue_play_number -= len(splits[1])
-      one_series_must_win = True
 
       if residue_play_number == 1:
         return splits[1][0]
@@ -734,7 +729,6 @@ def choose_from_one_strategy_new(strategy, other_hands, leftOvers, myPlayerId):
     if exp2 >= (float(2*len(splits[2]))-0.00001):
       must_win_series_number += 1
       residue_play_number -= len(splits[2])
-      two_series_must_win = True
 
       if residue_play_number == 1:
         return splits[2][0]
@@ -743,7 +737,6 @@ def choose_from_one_strategy_new(strategy, other_hands, leftOvers, myPlayerId):
     exp3 = npc.cal_three_cards_expectation_length([], splits[3], other_hands, otherHandGroup, leftOvers)
     if exp3 >= (float(3*len(splits[3]))-0.00001):
       must_win_series_number +=1 
-      three_series_must_win = True
       residue_play_number -= len(splits[3])
       if residue_play_number == 1:
         return splits[3][0]
@@ -799,20 +792,6 @@ def choose_from_one_strategy_new(strategy, other_hands, leftOvers, myPlayerId):
           return splits[1][0]
 
     return splits[2][0]
-
-    d = splits[1][-1][0] - other_hands[-1]
-    if d > 0:
-      return splits[1][0]
-    d2 = get_rank(splits[2][-1][1])
-    two_groups = npc.cal_two_cards(other_hands)
-    if len(two_groups) == 0:
-      return splits[2][-1]
-    else:
-      if compare_two(splits[2][-1], two_groups[-1]) == GREATER:
-        return splits[2][0]
-      elif get_rank(two_groups[-1][0]) - get_rank(splits[2][-1][0]) <= 2:
-        return splits[2][0]
-    return splits[1][0]
 
   #only singles and threes
   if moveLengths[2] == 0 and moveLengths[5] == 0 and moveLengths[1] > 0 and moveLengths[3] > 0:
@@ -885,240 +864,6 @@ def get_other_cards(cards):
 
 ######################helper-end###################
 
-
-###########################simulate########################
-def simulate_one_card_play_one_round(toBeat, myHands, hands1, hands2, hands3):
-  low = toBeat
-  numPlayedCards = 0
-  while True:
-    ps = 0
-    play = None
-    for i in range(len(myHands)):
-      if low < myHands[i]:
-        play = myHands[i]
-        low = myHands[i]
-        del myHands[i]
-        numPlayedCards += 1
-        break
-    if play == None:
-      break
-    elif len(myHands) == 0:
-      break
-
-    play = None
-    for i in range(len(hands1)):
-      if low < hands1[i]:
-        play = hands1[i]
-        low = hands1[i]
-        del hands1[i]
-        break
-    if play== None:
-      ps += 1
-    elif len(hands1) == 0:
-        break
-
-    play = None
-    for i in range(len(hands2)):
-      if low < hands2[i]:
-        play = hands2[i]
-        low = hands2[i]
-        del hands2[i]
-        break
-    if play== None:
-      ps += 1
-    elif len(hands2) == 0:
-      break
-
-    play = None
-    for i in range(len(hands3)):
-      if low < hands3[i]:
-        play = hands3[i]
-        low = hands3[i]
-        del hands3[i]
-        break
-    if play== None:
-      ps += 1
-    elif len(hands3) == 0:
-      break
-
-    if ps == 3:
-      low = -1
-
-  return numPlayedCards
-
-
-def simulate_one_card_play_expectation(toBeat, myCards, otherHands, leftOvers):
-  seed_value = int(time.time())
-  random.seed(seed_value)
-  others = copy.deepcopy(otherHands)
-  expl = 0.0
-  for i in range(MCTS_LOOP):
-    random.shuffle(others)
-    hands1 = others[0:leftOvers[0]]
-    hands1 = sorted(hands1)
-    hands2 = others[leftOvers[0]:leftOvers[0]+leftOvers[1]]
-    hands2 = sorted(hands2)
-    hands3 = others[leftOvers[0]+leftOvers[1]: leftOvers[0]+leftOvers[1]+leftOvers[2]]
-    hands3 = sorted(hands3)
-    myHands = copy.deepcopy(myCards)
-    numPlayedCards = simulate_one_card_play_one_round(toBeat,myHands,hands1,hands2, hands3)
-    expl += numPlayedCards
-  expl = expl/MCTS_LOOP
-
-  return expl
-
-
-def simulate_two_cards_play_one_round(toBeat, myHands, hands1, hands2, hands3):
-  low = toBeat
-  numPlayedCards = 0
-  handsGroup = [hands1,hands2,hands3]
-  while True:
-    ps = 0
-    play = None
-    for i in range(len(myHands)):
-      if compare_two(low, myHands[i])== LESS:   
-        play = myHands[i]
-        low = myHands[i]
-        del myHands[i]
-        numPlayedCards += 2
-        break
-    if play == None:
-      break
-    elif len(myHands) == 0:
-      break
-
-    for hands in handsGroup:
-      play = None
-      for i in range(len(hands)):
-        if (len(hands[i]) == 2 and LESS==compare_two(low,hands[i])) or (len(hands[i])==3 and LESS==compare_two(low,hands[i][-2:])):
-          play = hands[i][-2:]
-          low = hands[i][-2:]
-          del hands[i]
-          break
-        elif len(hands[i]) == 4 and LESS==compare_two(low, hands[i][-2:]):
-          play = [hands[i][0],hands[i][3]]
-          low = [hands[i][0],hands[i][3]]
-          hands[i] = [hands[i][1],hands[i][2]]
-          break
-      if play== None:
-        ps += 1
-      elif len(hands) == 0:
-          break
-    if len(hands1) == 0 or len(hands2) == 0 or len(hands3) == 0:
-      break
-
-    if ps == 3:
-      low = [-1,-1]
-
-  return numPlayedCards
-
-
-def simulate_two_cards_play_expectation(toBeat, split, otherHands, leftOvers):
-  seed_value = int(time.time())
-  random.seed(seed_value)
-  others = copy.deepcopy(otherHands)
-  expl = 0.0
-  for i in range(MCTS_LOOP):
-    random.shuffle(others)
-    hands1 = others[0:leftOvers[0]]
-    hands1 = sorted(hands1)
-    hands1 = make_hand_group(hands1)
-    hands1 = [sub_array for sub_array in hands1 if len(sub_array)>1 ]
-    hands2 = others[leftOvers[0]:leftOvers[0]+leftOvers[1]]
-    hands2 = sorted(hands2)
-    hands2 = make_hand_group(hands2)
-    hands2 = [sub_array for sub_array in hands2 if len(sub_array)>1 ]
-    hands3 = others[leftOvers[0]+leftOvers[1]: leftOvers[0]+leftOvers[1]+leftOvers[2]]
-    hands3 = sorted(hands3)
-    hands3 = make_hand_group(hands3)
-    hands3 = [sub_array for sub_array in hands3 if len(sub_array)>1 ]
-    myHands = copy.deepcopy(split)
-    numPlayedCards = simulate_two_cards_play_one_round(toBeat,myHands,hands1,hands2, hands3)
-    expl += numPlayedCards
-  expl = expl/MCTS_LOOP
-
-  return expl
-
-
-def simulate_three_cards_play_one_round(toBeat, myHands, hands1, hands2, hands3):
-  low = toBeat
-  numPlayedCards = 0
-  handsGroup = [hands1,hands2,hands3]
-  while True:
-    ps = 0
-    play = None
-    for i in range(len(myHands)):
-      if compare_three(low, myHands[i])== LESS:   
-        play = myHands[i]
-        low = myHands[i]
-        del myHands[i]
-        numPlayedCards += 3
-        break
-    if play == None:
-      break
-    elif len(myHands) == 0:
-      break
-
-    for hands in handsGroup:
-      play = None
-      for i in range(len(hands)):
-        if len(hands[i]) == 3 and LESS == compare_three(low,hands[i]):
-          play = hands[i]
-          low = hands[i]
-          del hands[i]
-          break
-        elif len(hands[i]) == 4 and LESS == compare_three(low, hands[i][0:3]):
-          play = hands[i][0:3]
-          low = hands[i][0:3]
-          del hands[i]
-          break
-      if play == None:
-        ps += 1
-      elif len(hands) == 0:
-          break
-    if len(hands1) == 0 or len(hands2) == 0 or len(hands3) == 0:
-      break
-
-    if ps == 3:
-      low = [-1,-1,-1]
-
-  return numPlayedCards
-
-def simulate_three_cards_play_expectation(toBeat, split, otherHands, leftOvers):
-  seed_value = int(time.time())
-  random.seed(seed_value)
-  others = copy.deepcopy(otherHands)
-  expl = 0.0
-  for i in range(MCTS_LOOP):
-    random.shuffle(others)
-    hands1 = others[0:leftOvers[0]]
-    hands1 = sorted(hands1)
-    hands1 = make_hand_group(hands1)
-    hands1 = [sub_array for sub_array in hands1 if len(sub_array)>2 ]
-    hands2 = others[leftOvers[0]:leftOvers[0]+leftOvers[1]]
-    hands2 = sorted(hands2)
-    hands2 = make_hand_group(hands2)
-    hands2 = [sub_array for sub_array in hands2 if len(sub_array)>2 ]
-    hands3 = others[leftOvers[0]+leftOvers[1]: leftOvers[0]+leftOvers[1]+leftOvers[2]]
-    hands3 = sorted(hands3)
-    hands3 = make_hand_group(hands3)
-    hands3 = [sub_array for sub_array in hands3 if len(sub_array)>2 ]
-    myHands = copy.deepcopy(split)
-    numPlayedCards = simulate_three_cards_play_one_round(toBeat,myHands,hands1,hands2, hands3)
-    expl += numPlayedCards
-  expl = expl/MCTS_LOOP
-
-  return expl
-
-###########################simulate-end######################
-
-#############################npc#####################
-
-#Monte Carlo tree search
-
-
-
-###############################npc-end############
 
 
 class PlayInfo:
@@ -1224,13 +969,13 @@ class Algorithm:
 
 
       print(f"{VERSION}\n")
-      print(f"myPlayerNum = {state.myPlayerNum}\n")
-      print(f"toBeatId = {toBeatId}\n")
-      print(f"myHands = {transform_out(sorted(myHandCards))}\n")
-      print(f"myHandsColor = {self.sort_and_transform_by_color(myHandCards)}\n")
-      print(f"toBeat = {transform_out(toBeat)}\n")
-      print(f"otherHands = {transform_out(other_hands)}\n")
-      print(f"handSize = {[state.players[0].handSize,state.players[1].handSize,state.players[2].handSize,state.players[3].handSize]}\n")
+      # print(f"myPlayerNum = {state.myPlayerNum}\n")
+      # print(f"toBeatId = {toBeatId}\n")
+      # print(f"myHands = {transform_out(sorted(myHandCards))}\n")
+      # print(f"myHandsColor = {self.sort_and_transform_by_color(myHandCards)}\n")
+      # print(f"toBeat = {transform_out(toBeat)}\n")
+      # print(f"otherHands = {transform_out(other_hands)}\n")
+      # print(f"handSize = {[state.players[0].handSize,state.players[1].handSize,state.players[2].handSize,state.players[3].handSize]}\n")
 
       leftOvers = newNpc.cal_otherHands_numbers(state.myPlayerNum, state.players)
 
@@ -1405,73 +1150,6 @@ class NewNPC:
       return 0.0
       #return myOne[0]/otherHands[-1]
     return 1.0
-
-  # def mc_play_one_card_by_smallest_strategy(self, cards, toBeat):
-  #   rt = []
-  #   for i in range(len(cards)):
-  #     if cards[i][0] > toBeat[0]:
-  #       rt = cards[i]
-  #       del cards[i]
-  #       return rt, True
-  #   return toBeat, False
-
-  # def npc_play_one_cards_by_random_strategy(self, cards, toBeat):
-  #   return False
-
-  # def mc_play_two_cards_by_smallest_strategy(self, cards, toBeat):
-  #   return False
-
-  # def npc_play_two_cards_by_random_strategy(self,cards, toBeat):
-  #   return False
-
-  # def mc_play_three_cards_by_smallest_strategy(self, cards, toBeat):
-  #   return False
-
-  # def npc_play_three_cards_by_random_strategy(self, cards, toBeat):
-  #   return False
-
-  # def cal_strategy_value_by_mcts(self, strategy, otherHands, otherHandsGroup, leftOvers):
-  #   splits = split_moves_according_to_length(strategy)
-  #   p = 1.0
-
-  #   seed_value = int(time.time())
-  #   random.seed(seed_value)
-
-
-  #   for i in range(MCTS_OTHER_ROLE_LOOP):
-  #     otherHandsCpy = copy.deepcopy(otherHands)
-  #     random.shuffle(otherHandsCpy)
-  #     hd0_1 = copy.deepcopy(splits[1])
-  #     hd0_2 = copy.deepcopy(splits[2])
-  #     hd0_3 = copy.deepcopy(splits[3])
-  #     hd1 = make_hand_group(sorted(otherHandsCpy[0:leftOvers[0]]))
-  #     hd2 = make_hand_group(sorted(otherHandsCpy[leftOvers[0]:leftOvers[1]]))
-  #     hd3 = make_hand_group(sorted(otherHandsCpy[leftOvers[1]:leftOvers[2]]))
-
-  #     if len(splits[1])> 0:
-  #       not_finish = True 
-  #       toBeat = []
-  #       acc_fail = 0
-  #       ar = [hd0_1,hd1,hd2,hd3]
-  #       i = 0
-  #       while not_finish:
-  #         toBeat,suc = self.mc_play_one_card_by_smallest_strategy(ar[i], toBeat)
-  #         i = (i+1)%4
-  #         if suc == False:
-  #           acc_fail += 1
-  #           if acc_fail == 3:
-  #             break
-  #         else:
-  #           acc_fail = 0
-  #         toBeat = self.npc_play_one_cards_by_random_strategy(hd1, toBeat)
-  #         toBeat = self.npc_play_one_cards_by_random_strategy(hd2, toBeat)
-  #         toBeat = self.npc_play_one_cards_by_random_strategy(hd3, toBeat)
-        
-  #     if len(splits[2]) > 0:
-  #       pass
-  #     if len(splits[3]) > 0:
-  #       pass
-  #   return 
   
   def cal_one_cards_expectation_length_old(self, split, otherHands):
     if len(split) == 0 or len(otherHands) == 0:
@@ -1560,43 +1238,7 @@ class NewNPC:
     
     expl = simulate_three_cards_play_expectation(toBeat, split, otherHands, leftOvers)
     return expl
-  
-  #a very extremly formula, to be optimized (FIX ME)
-  def cal_two_cards_expectation_length_old(self, split, otherHands, otherHandsGroup, leftOvers):
-    if len(split) == 0 or len(otherHands) == 0:
-      return 0.0 
 
-    #now we do sorting
-    pairs = []
-    for i in range(len(otherHandsGroup)):
-      if len(otherHandsGroup[i]) == 2:
-        pairs.append(otherHandsGroup[i])
-      elif len(otherHandsGroup[i]) == 3:
-        pairs.append(otherHandsGroup[i][1:3])
-      elif len(otherHandsGroup[i]) == 4:
-        pairs.append(otherHandsGroup[i][2:4])
-
-    for i in range(len(split)//2, len(split)):
-      pairs.append(split[i])
-
-    pairs = sorted(pairs, key = cmp_to_key(compare_two))
-
-    fracs = []
-    for i in range(len(split)//2, len(split)):
-      for j in range(len(pairs)):
-        if split[i] == pairs[j]:
-          fracs.append(float(j+1)/len(pairs))
-          pairs.remove(pairs[j])
-          break
-    
-    expl = 2
-    for i in range(len(fracs)-1, -1, -1):
-      if fracs[i] >= 0.9999:
-        expl += 4
-    if expl > len(split) * 2:
-      expl = len(split) * 2
-    
-    return expl
   
   def cal_two_cards_expectation_length(self, toBeat, split, otherHands, otherHandsGroup, leftOvers):
     if len(split) == 0 or len(otherHands) == 0:
@@ -1736,186 +1378,25 @@ class NewNPC:
       expl = float(len(split)) * 3.0
     
     return expl
-  
-  def cal_strategy_expectation_length(self, toBeat, strategy, otherHands, otherHandsGroup, leftOvers):
-    splits = split_moves_according_to_length(strategy)
-    expl = 0.0
-
-    to_beat1 = [-1]
-    to_beat2 = [-1,-1]
-    to_beat3 = [-1,-1,-1]
-    to_beat5 = [-1,-1,-1,-1,-1]
-    if len(toBeat) == 1:
-      to_beat1 = toBeat
-    elif len(toBeat) == 2:
-      to_beat2 = toBeat
-    elif len(toBeat) == 3:
-      to_beat3 = toBeat
-    elif len(toBeat) == 5:
-      to_beat5 = toBeat
-
-    exp1 = 0.0
-    exp2 = 0.0
-    exp3 = 0.0
-    exp5 = 0.0
-    if len(splits[1]) > 0:
-      exp1 += self.cal_one_cards_expectation_length(to_beat1, splits[1], otherHands, otherHandsGroup,leftOvers)
-    if len(splits[2]) > 0:
-      exp2 += self.cal_two_cards_expectation_length(to_beat2, splits[2], otherHands, otherHandsGroup,leftOvers )
-    if len(splits[3]) > 0:
-      exp3 += self.cal_three_cards_expectation_length(to_beat3, splits[3], otherHands, otherHandsGroup, leftOvers)
-    if len(splits[5])>0:
-      # for move in splits[5]:
-      #   tp = card5_type(move)
-      #   pb = get_prob_from_type5(tp)
-      #   exp5 += 5.0 * pb
-      exp5 += 5.0 * len(splits[5]) #FIXME
-
-    expl = exp1 + exp2 + exp3 + exp5
-    return expl
-  
-
-  def cal_strategy_value(self, strategy, otherHands, otherHandsGroup, otherHandNumbers):
-    splits = split_moves_according_to_length(strategy)
-    #calculate value of each split
-    #the value of this strategy is the product of the probability of no beat
-
-    p = 1.0
-    #calculate 1-card move values:
-    #lowest,[otherhands],highest,[otherhands]
-    other_len = len(otherHands)
-    if len(splits[1])> 0:
-      l = len(splits[1])
-      ind = -1
-      #a simple formula to count the probablity of play all single cards
-      while l > 0 and (-ind)<=other_len:
-        myMax = splits[1][ind][0]
-        if myMax < otherHands[ind]:
-          p *= float(myMax)/float(otherHands[ind])
-        l-=2
-        ind -= 1
-    if len(splits[2])> 0:
-      l = len(splits[2])
-      ind = -1
-      while l > 0:
-        p *= self.probability_of_bigger_pair_not_exist(splits[2][ind],otherHandsGroup,otherHandNumbers )
-        ind -= 1
-        l -= 2
-    if len(splits[3])> 0:
-      l = len(splits[3])
-      ind = -1
-      while l > 0:
-        p *= self.probability_of_bigger_three_not_exist(splits[3][ind], otherHandsGroup, otherHandNumbers)
-        ind -= 1
-        l -= 2
-    if len(splits[5])>0:
-      l = len(splits[5])
-      ind = -1
-      while l > 0:
-        p *= self.probability_of_bigger_five_not_exist(splits[5][ind], otherHandsGroup, otherHandNumbers)
-        ind -= 1
-        l -= 2
-
-    return p
-
 
   def sort_box_by_value(self, box_with_value, reverse = False):
     box_with_value = sorted(box_with_value, key = lambda x:x[1], reverse = reverse)
 
     return box_with_value
   
-  def play_left_first(self, box1, box2):
-    hg1 = make_hand_group(box1)
-    hg2 = make_hand_group(box2)
 
-
-    return 
-  
-  def play_with_each_other(self, box1, box2):
-    l = 0
-    r = 0
-    l = self.play_left_first(box1, box2)
-    r = self.play_left_first(box2, box1)
-
-
-    return l,r
-
-  def cal_strategy_optimized_len(self, strategy, otherHands, otherHandsGroup, leftOvers):
-    originalLen = len(strategy)
-    splits = split_moves_according_to_length(strategy)
-    if len(splits[2])==1 and len(splits[1])> 0:
-      p = self.probability_of_bigger_pair_not_exist(splits[2][-1])
-      if p >= 0.9:
-        pass
-      
-      
-    return 
-  
 
   def cal_good_composites(self, toBeat, handCards, otherHands, otherHandNumbers):
-    start_1 = time.perf_counter()
-
     box = []
     current = []
 
-    # start3 = time.perf_counter()
-    otherHandsGroup = make_hand_group(otherHands)
     self.deep_search5(handCards,current, box)
-    # end3 = time.perf_counter()
-    # print(f"time3:{end3-start3:.6f}\n")
 
     #merge 3+2, 4+1 composites
-    # start4 = time.perf_counter()
     self.merge_moves_in_each_strategy(box)
-    # end4 = time.perf_counter()
-    # print(f"time4:{end4-start4:.6f}\n")
 
-    start5 = time.perf_counter()
-    real_length = min(len(box), BOX_USE_LENGTH)
-    if STRATEGY_TYPE == STRATEGY_TYPE_LEN:
-      for i in range(len(box)):
-        box[i] = [box[i], len(box[i])]
-      box = self.sort_box_by_value(box)
-    elif STRATEGY_TYPE == STRATEGY_TYPE_PROBABILITY:
-      for i in range(len(box)):
-        value = self.cal_strategy_value(box[i], otherHands, otherHandsGroup, otherHandNumbers)
-        box[i] = [box[i], value]
-      box = self.sort_box_by_value(box, reverse = True)
-    elif STRATEGY_TYPE == STRATEGY_TYPE_EXPECTATION:
-      for i in range(len(box)):
-        box[i] = [box[i], len(box[i])]
-      box = self.sort_box_by_value(box)
-      for i in range(real_length):
-        value = self.cal_strategy_expectation_length(toBeat, box[i][0], otherHands, otherHandsGroup, otherHandNumbers)
-        box[i][1] = value
-      box[0: real_length] = self.sort_box_by_value(box[0: real_length], reverse = True) 
-    elif STRATEGY_TYPE == STRATEGY_TYPE_OPTIMIZED_LEN:
-      for i in range(len(box)):
-        value = self.cal_strategy_optimized_len(box[i], otherHands, otherHandsGroup, otherHandNumbers)
-        box[i] = [box[i], value]
-      box = self.sort_box_by_value(box)
-    elif STRATEGY_TYPE == STRATEGY_TYPE_COMPARE:
-      for i in range(len(box)):
-        box[i] = [box[i], len(box[i])]
-      box = self.sort_box_by_value(box)
-      length = min(len(box), BOX_USE_LENGTH)
-      winBoard = [0] * length
-      for i in range(length):
-        for j in range(i+1, length):
-          l_win, r_win = self.play_with_each_other(box[i][0],box[j][0])
-          winBoard[i] += l_win
-          winBoard[j] += r_win
-      for i in range(length):
-        box[i][1] = winBoard[i]
-      box = self.sort_box_by_value(box, reverse = True)
-    else:
-      pass
-
-    # end5 = time.perf_counter()
-    # print(f"time5:{end5-start5:.6f}\n")
-
-    end_1 = time.perf_counter()
-    print(f"cal_good_composites:{end_1-start_1:.6f} second\n")
+    for i in range(len(box)):
+      box[i] = [box[i], 0]
 
     return box
     
@@ -2265,33 +1746,10 @@ class NewNPC:
     box = self.cal_good_composites([], myHandCards, otherHands, otherHandsNumbers)
     iter_num = min(len(box), BOX_USE_LENGTH)
 
-    #tackle ties, if has same mark, bigger singles would be prefered
-    v1 = box[0][1]
-    split_index = iter_num
     for i in range(iter_num):
-      if box[i][1] < v1:
-        split_index = i
-        break
-
-    if split_index < iter_num:
-      v2 =box[split_index][1]
-      t_start = split_index
-      split_index = iter_num
-      for i in range(t_start, iter_num):
-        if box[i][1] < v2:
-          split_index = i
-          break
-    
-
-    for i in range(split_index):
       distrib  = self.cal_numeric_value_distrib(box[i][0])
       box[i][1] = distrib 
-    box[0:split_index] = sorted(box[0:split_index], key = cmp_to_key(distrib_compare), reverse = True)
-
-    #recover value
-    for i in range(split_index):
-      box[i][1] = v1
-
+    box[0:iter_num] = sorted(box[0:iter_num], key = cmp_to_key(distrib_compare), reverse = True)
 
     
     if first_round_first_play:
@@ -2340,7 +1798,6 @@ class NewNPC:
 
 
     elif lenToBeat == 2:
-      #box =  self.sort_by_toBeat_two_value(box, toBeat, iter_num)
       for i in range(iter_num):
         strategy = box[i][0]
         for s in strategy:
@@ -2349,7 +1806,6 @@ class NewNPC:
             folder = self.two_cards_folder(s, strategy, otherHands, otherHandsNumbers)
             if folder == True:
               print("two_cards_folder!\n")
-              #chosen = []
               break
             chosen = s
             break
